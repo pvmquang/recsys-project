@@ -1,0 +1,28 @@
+# --- Nen: dung tu tuan 1. Version lay tu ban da cai va chay duoc. ---
+pandas==3.0.6
+numpy==2.5.3
+scipy==1.18.1
+scikit-learn==1.9.1
+requests==2.34.2
+tqdm==4.70.1
+pytest==9.1.1
+python-dotenv==1.2.3
+
+# --- Nhung goi duoi CHUA cai. Them khi toi tuan can den, roi ghim lai
+#     bang: .venv/Scripts/python -m pip freeze > requirements-lock.txt ---
+
+# Truc quan hoa ket qua (tuan 11-12)
+# matplotlib
+
+# Loc cong tac, bac B3-B4 (tuan 5-6). Da kiem: co wheel cho Python 3.13.
+# scikit-surprise
+# implicit
+
+# Luat ket hop cho goi y theo phien, bac B6 (tuan 7-8)
+# mlxtend
+
+# Prototype web (tuan 11)
+# Flask
+
+# torch cho B6/B8: cai RIENG, khong ghim o day (ban CPU vs CUDA khac nhau):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
