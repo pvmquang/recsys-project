@@ -19,24 +19,24 @@ Các mục này đổi số liệu trên slide. Làm 1.1–1.6 xong mới chạy
 
 ### Repo
 
-- [ ] **1.1 Sửa seed của `RandomRec`** · @... · *FB#3a + RV*
+- [x] **1.1 Sửa seed của `RandomRec`** · @... · *FB#3a + RV*
   - `default_rng(self.seed + user_id)` làm các seed chồng nhau: user `u` ở seed 1 dùng
     đúng luồng của user `u+1` ở seed 0. Seed 0–5 cho recall@10 = 0.1115 ở 5/6 lần.
   - Với 10 seed độc lập: AUC trung bình **0.4965** (0.479–0.509), recall@10 **0.093**,
     khớp lý thuyết. Vậy AUC 0.5258 là một lần rút xui, **khung đo không sai**.
   - Sửa: `np.random.default_rng([self.seed, int(user_id)])`.
 
-- [ ] **1.2 `recommend()` bỏ item điểm `-inf`** · @... · *RV*
+- [x] **1.2 `recommend()` bỏ item điểm `-inf`** · @... · *RV*
   - Một user không có láng giềng UserKNN nhận 20 phim tùy ý, và chúng được đếm vào
     coverage. Sau này sẽ hiện lên giao diện Flask.
   - Đổi hành vi, không đổi giao diện hợp đồng ở `base.py`. Làm trước khi B3 bắt đầu.
 
-- [ ] **1.3 Coverage tính cho từng k, bảng chính dùng coverage@10** · @... · *FB#2*
+- [x] **1.3 Coverage tính cho từng k, bảng chính dùng coverage@10** · @... · *FB#2*
   - Hiện là coverage@20 (`recommend(k=max(ks))`) nhưng đặt cạnh các cột @10.
   - Số @10 hiện tại: Popularity 0.0125 · ItemKNN 0.0768 · UserKNN 0.0298.
     ItemKNN vẫn phủ gấp ~6 lần Popularity.
 
-- [ ] **1.4 Bootstrap CI theo user trong runner** · @... · *FB#7 + RV*
+- [x] **1.4 Bootstrap CI theo user trong runner** · @... · *FB#7 + RV*
   - Số đo hiện tại (95% CI, 610 user):
 
     | chênh lệch | giá trị | CI | kết luận |
@@ -47,29 +47,31 @@ Các mục này đổi số liệu trên slide. Làm 1.1–1.6 xong mới chạy
 
   - k=40 so với k=80 chênh 0.0008 nDCG — gần như chắc chắn là nhiễu.
 
-- [ ] **1.5 Nhóm user chia theo phân vị** · @... · *FB#1 + RV*
+- [x] **1.5 Nhóm user chia theo phân vị** · @... · *FB#1 + RV*
   - Nhóm "5–20" thực chất là **29 user có 19–20 tương tác** (mọi user ml-latest-small
     có ≥ 20 rating). Chênh nDCG UserKNN − ItemKNN trong nhóm: +0.028, CI [−0.090, +0.159].
   - Chia 3 nhóm bằng nhau theo số tương tác. Sửa luôn `ks[1]` gán cứng trong
     `_by_activity` (`runner.py`).
 
-- [ ] **1.6 `exp_knn.py` lưu CSV cho cả 3 thí nghiệm** · @... · *RV*
+- [x] **1.6 `exp_knn.py` lưu CSV cho cả 3 thí nghiệm** · @... · *RV*
   - Hiện chỉ thí nghiệm 3 được ghi file; số thí nghiệm 1–2 trong README là chép tay.
 
-- [ ] **1.7 Lỗi chữ** · @... · *FB#8, #10, #11*
+- [x] **1.7 Lỗi chữ** · @... · *FB#8, #10, #11*
   - "tám bậc B0–B8" → "chín bậc": `README.md:47` và docstring `recsys/base.py:3`.
   - Docstring `exp_knn.py`: "Hai thi nghiem" → "Ba thi nghiem".
   - README thêm `source .venv/bin/activate` cho macOS/Linux.
 
-- [ ] **1.8 Chạy lại `run_eval.py` + `exp_knn.py`, cập nhật bảng trong README** · @...
+- [x] **1.8 Chạy lại `run_eval.py` + `exp_knn.py`, cập nhật bảng trong README** · @...
   - Sau khi xong 1.1–1.6. Số mới là số dùng cho slide.
 
-- [ ] **1.9 `explain()` hiện tên phim** · @... · *FB#9 + RV*
+- [x] **1.9 `explain()` hiện tên phim** · @... · *FB#9 + RV*
   - Đang in mã phim ("gan nhat: 318, 296"). Cần cho slide 10.
   - Truyền dict `titles` tùy chọn khi tạo mô hình; **không** gọi `load_movies()` bên trong
     mô hình (mô hình sẽ phụ thuộc file/mạng, test chậm).
 
 ### Slide
+
+Số liệu mới và gợi ý câu chữ cho từng slide: [so-lieu-slide.md](so-lieu-slide.md).
 
 - [ ] **S1 Điền chỗ trống** · @... · *FB#4*
   - Slide 1: tên nhóm, giảng viên hướng dẫn. Slide 2: họ tên, MSSV, email.
