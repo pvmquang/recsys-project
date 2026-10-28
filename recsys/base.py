@@ -1,6 +1,6 @@
 """Hop dong chung cho MOI mo hinh goi y trong do an.
 
-Tam bac mo hinh B0-B8 deu cai dat dung lop nay. Khung danh gia
+Chin bac mo hinh B0-B8 deu cai dat dung lop nay. Khung danh gia
 (recsys/eval/) chi biet den lop nay, khong biet ben trong mo hinh la gi.
 
 => Ba thanh vien lam song song tu tuan 3 ma khong giam chan nhau,
