@@ -143,6 +143,17 @@ class TestItemKNN:
         m = ItemKNN(k=3).fit(TRAIN)
         assert "tuong tu" in m.explain(1, 40)
 
+    def test_explain_in_TEN_phim_khi_co_titles(self):
+        """Cau giai thich hien len giao dien va slide -- 'gan nhat: 10, 20' khong
+        noi gi voi nguoi dung."""
+        titles = {10: "Toy Story (1995)", 20: "Heat (1995)", 30: "Up (2009)"}
+        txt = ItemKNN(k=3, titles=titles).fit(TRAIN).explain(1, 40)
+        assert any(t in txt for t in titles.values())
+
+    def test_explain_thieu_ten_thi_in_ma_phim_khong_nem(self):
+        txt = ItemKNN(k=3, titles={}).fit(TRAIN).explain(1, 40)
+        assert "gan nhat" in txt
+
     def test_adjusted_cosine_KHONG_bat_mac_dinh(self):
         assert ItemKNN().adjusted is False
 

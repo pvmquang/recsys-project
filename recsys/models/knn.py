@@ -31,6 +31,8 @@ do CA HAI che do roi giai thich vi sao chung khac nhau.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import numpy as np
 import pandas as pd
 from scipy import sparse
@@ -171,6 +173,7 @@ class ItemKNN(_KnnBase):
         score_mode: str = "sum",
         min_sim: float = 0.0,
         adjusted: bool = False,
+        titles: Mapping[int, str] | None = None,
     ):
         super().__init__(k, score_mode, min_sim)
         #: adjusted=True: tru trung binh CUA USER truoc khi tinh cosine
@@ -178,6 +181,10 @@ class ItemKNN(_KnnBase):
         #: Mac dinh TAT vi slide L2 tr.21 noi cosine tron -- bat len la mot
         #: thi nghiem dang do, khong phai mac dinh im lang.
         self.adjusted = adjusted
+        #: item_id -> ten phim, chi dung cho explain(). TRUYEN VAO chu khong tu
+        #: goi movielens.load_movies(): mo hinh khong nen phu thuoc file/mang,
+        #: va test dung du lieu do choi khong co ten phim. Thieu thi in ma phim.
+        self.titles = titles
 
     def _fit(self, train: pd.DataFrame) -> None:
         self.R_, self.users_, self.items_, self.uidx_, self.iidx_ = build_matrix(train)
@@ -239,8 +246,13 @@ class ItemKNN(_KnnBase):
             return ""
         w = {m: s for m, s in zip(srow.indices, srow.data)}
         best = sorted(shared, key=lambda m: -w[m])[:3]
-        ten = ", ".join(str(self.items_[m]) for m in best)
+        ten = ", ".join(self._title(int(self.items_[m])) for m in best)
         return f"Vi ban da danh gia {len(shared)} phim tuong tu (gan nhat: {ten})"
+
+    def _title(self, item_id: int) -> str:
+        if self.titles is None:
+            return str(item_id)
+        return self.titles.get(item_id, str(item_id))
 
 
 class UserKNN(_KnnBase):
