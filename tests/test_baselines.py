@@ -61,6 +61,15 @@ class TestRandom:
         items = np.array([10, 20, 30])
         assert not np.array_equal(m.score(1, items), m.score(2, items))
 
+    def test_seed_KHONG_chong_len_nhau_giua_cac_user(self):
+        """Gieo bang `seed + user_id` thi (seed=1, user=1) trung (seed=0, user=2):
+        doi seed chi xoay vong cung mot bo luong so, va trung binh tren moi
+        user gan nhu khong doi. Chay "nhieu seed" khi do la chay mot lan."""
+        items = np.arange(50)
+        a = RandomRec(seed=1).fit(TRAIN).score(1, items)
+        b = RandomRec(seed=0).fit(TRAIN).score(2, items)
+        assert not np.array_equal(a, b)
+
 
 class TestHopDong:
     """Hanh vi ma MOI bac B0-B8 phai co, do `Recommender` bao dam."""
