@@ -143,6 +143,17 @@ class TestItemKNN:
         m = ItemKNN(k=3).fit(TRAIN)
         assert "tuong tu" in m.explain(1, 40)
 
+    def test_explain_in_TEN_phim_khi_co_titles(self):
+        """Cau giai thich hien len giao dien va slide -- 'gan nhat: 10, 20' khong
+        noi gi voi nguoi dung."""
+        titles = {10: "Toy Story (1995)", 20: "Heat (1995)", 30: "Up (2009)"}
+        txt = ItemKNN(k=3, titles=titles).fit(TRAIN).explain(1, 40)
+        assert any(t in txt for t in titles.values())
+
+    def test_explain_thieu_ten_thi_in_ma_phim_khong_nem(self):
+        txt = ItemKNN(k=3, titles={}).fit(TRAIN).explain(1, 40)
+        assert "gan nhat" in txt
+
     def test_adjusted_cosine_KHONG_bat_mac_dinh(self):
         assert ItemKNN().adjusted is False
 
@@ -192,9 +203,21 @@ class TestHopDong:
         assert set(model.recommend(1, k=4)) == {40}  # u1 da xem 10, 20, 30
 
     @pytest.mark.parametrize("model", [ItemKNN(k=3), UserKNN(k=3)])
-    def test_recommend_user_LA_khong_nem(self, model):
+    def test_recommend_user_LA_khong_nem_va_tra_ve_RONG(self, model):
+        """KNN khong co bang chung nao cho user chua tung thay => moi diem -inf.
+
+        Truoc day bai nay doi du 2 phim -- tuc la doi hai phim chon tuy y tu
+        cac diem bang nhau, trong y het goi y that. Rong moi la cau tra loi
+        dung: B7 dua vao do de chuyen sang Popularity hay noi dung.
+        """
         model.fit(TRAIN)
-        assert len(model.recommend(999, k=2)) == 2
+        assert model.recommend(999, k=2) == []
+
+    def test_recommend_KHONG_tra_item_khong_bang_chung(self):
+        """Item -inf khong duoc lap vao cho du k, du k lon hon so item co diem."""
+        m = UserKNN(k=3).fit(TestPhuongSaiKhong.PHANG)
+        # u1 khong co lang gieng nao => khong item nao co bang chung
+        assert m.recommend(1, k=5, exclude_seen=False) == []
 
     @pytest.mark.parametrize("model", [ItemKNN(k=3), UserKNN(k=3)])
     def test_score_dung_do_dai(self, model):

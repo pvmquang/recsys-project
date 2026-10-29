@@ -14,11 +14,14 @@ import numpy as np
 import pandas as pd
 
 from recsys.base import Recommender
-from recsys.data.split import Split, user_activity_groups
+from recsys.data.split import Split
 from recsys.eval import metrics as m
 
 #: Cac gia tri K duoc bao cao. Chot o de xuat de tai.
 DEFAULT_KS = (5, 10, 20)
+
+#: K cua bang chinh va cua phan tich theo nhom. Giao dien hien 10 phim.
+MAIN_K = 10
 
 
 def evaluate(
@@ -26,12 +29,16 @@ def evaluate(
     split: Split,
     ks: Sequence[int] = DEFAULT_KS,
     by_activity: bool = False,
+    keep_per_user: bool = False,
 ) -> dict:
     """Danh gia mot mo hinh DA duoc fit.
 
     Voi moi user: cham diem 100 ung vien (1 dung + 99 am), xep hang, do.
 
     Tra ve dict phang, tien do thang vao DataFrame.
+
+    keep_per_user: them khoa "per_user" (DataFrame, chi so user_id) -- can cho
+        khoang tin cay, xem recsys/eval/stats.py.
     """
     per_user: list[dict] = []
     all_recommended: list[list[int]] = []
@@ -70,40 +77,57 @@ def evaluate(
         if col != "user_id":
             result[col] = float(df[col].mean())
 
+    # Coverage@k cho TUNG k. Mot cot "coverage" khong ghi k thi nguoi doc se
+    # ghep no voi cot @10 ben canh, trong khi no la @max(ks) -- da xay ra o ban
+    # truoc. Lay tien to cua top-max(ks) la dung: recommend() da xep giam dan.
     n_items = len(model.all_items_)
-    result["coverage"] = m.coverage(all_recommended, n_items)
+    for k in ks:
+        result[f"coverage@{k}"] = m.coverage((r[:k] for r in all_recommended), n_items)
 
     if by_activity:
-        result["theo_nhom"] = _by_activity(df, split, ks)
+        result["theo_nhom"] = _by_activity(df, split)
+    if keep_per_user:
+        result["per_user"] = df.set_index("user_id")
 
     return result
 
 
 def _by_activity(
-    per_user: pd.DataFrame, split: Split, ks: Sequence[int]
+    per_user: pd.DataFrame, split: Split, k: int = MAIN_K, n_groups: int = 3
 ) -> pd.DataFrame:
-    """Tach ket qua theo nhom user thua/day -- phuc vu phan tich cold-start.
+    """Tach ket qua theo nhom user, chia theo PHAN VI so tuong tac trong train.
 
     Tra ve DataFrame (mot dong mot nhom), KHONG phai dict long nhau: dict
     khoa tuple cua pandas khong ghep thang vao bao cao duoc.
 
-    CANH BAO VE DU LIEU -- doc truoc khi dien so nay vao bao cao:
-    MovieLens chi nhan user da danh gia IT NHAT 20 phim. Do tren
-    ml-latest-small: min = 20, khong co user nao duoi nguong do. Nghia la
-    nhom "<5" LUON RONG, va bang nay KHONG tra loi duoc cau hoi cold-start
-    that su ("mo hinh nao tot cho user moi").
+    VI SAO CHIA THEO PHAN VI, KHONG THEO NGUONG CO DINH (5, 20, 100)
+    MovieLens chi nhan user da danh gia IT NHAT 20 phim, nen sau khi tach 1 phim
+    lam test, train con it nhat 19. Voi nguong co dinh, nhom "5-20" thuc chat la
+    29 user co 19-20 tuong tac -- qua it de ket luan (chenh nDCG UserKNN - ItemKNN
+    trong nhom do: +0.028, CI 95% [-0.090, +0.159]) va bi doc nham thanh "user it
+    lich su". Chia phan vi thi nhom nao cung ~200 user, va nhan ghi DUNG khoang
+    so tuong tac that.
 
-    Muon do cold-start thi phai TAO RA no: cat bot lich su huan luyen cua
-    mot phan user xuong con 1, 3, 5 tuong tac roi do lai. Bay bang nay ra
-    va goi no la phan tich cold-start la ket luan ve mot nhom nguoi dung
-    khong ton tai trong du lieu.
+    CANH BAO: bang nay KHONG phai phan tich cold-start. Nhom thua nhat van co
+    >= 19 tuong tac. Muon do cold-start thi phai TAO RA no: cat bot lich su huan
+    luyen cua mot phan user xuong con 1, 3, 5 tuong tac roi do lai.
     """
-    groups = user_activity_groups(split.train)
+    counts = split.train.groupby("user_id").size()
+    counts = counts[counts.index.isin(per_user["user_id"])]
+    bins = pd.qcut(counts, q=n_groups, duplicates="drop")
+    # Nhan bang khoang THAT trong du lieu ("19-45"), khong phai khoang qcut
+    # ("(18.999, 45.0]") -- de ghi thang vao bang bao cao.
+    span = counts.groupby(bins, observed=True).agg(["min", "max"])
+    label = {iv: f"{int(r['min'])}-{int(r['max'])}" for iv, r in span.iterrows()}
+    groups = bins.map(label)
+
     df = per_user.assign(nhom=per_user["user_id"].map(groups))
-    cols = [f"recall@{ks[1]}", f"ndcg@{ks[1]}", "mrr"]
-    out = df.groupby("nhom")[cols].mean()
-    out.insert(0, "so_user", df.groupby("nhom").size())
-    return out.sort_values("so_user", ascending=False).round(4)
+    cols = [f"recall@{k}", f"ndcg@{k}", "mrr"]
+    out = df.groupby("nhom", sort=False)[cols].mean()
+    out.insert(0, "so_user", df.groupby("nhom", sort=False).size())
+    # Xep theo so tuong tac tang dan, khong theo thu tu chu cai ("102-..." < "19-...").
+    order = sorted(out.index, key=lambda s: int(s.split("-")[0]))
+    return out.loc[order].round(4)
 
 
 def compare(
@@ -134,6 +158,6 @@ def format_table(df: pd.DataFrame, ks: Sequence[int] = DEFAULT_KS) -> str:
     cols = ["n_users"]
     for k in ks:
         cols += [f"recall@{k}", f"ndcg@{k}"]
-    cols += ["mrr", "auc", "coverage"]
+    cols += ["mrr", "auc", f"coverage@{MAIN_K}"]
     cols = [c for c in cols if c in df.columns]
     return df[cols].round(4).to_string()

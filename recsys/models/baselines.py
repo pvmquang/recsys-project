@@ -59,8 +59,14 @@ class RandomRec(Recommender):
         pass
 
     def score(self, user_id: int, item_ids: np.ndarray) -> np.ndarray:
-        # Gieo theo user_id de ket qua lap lai duoc giua cac lan chay.
-        rng = np.random.default_rng(self.seed + int(user_id))
+        # Gieo theo (seed, user_id) de ket qua lap lai duoc giua cac lan chay.
+        #
+        # KHONG gieo bang `seed + user_id`: khi do user u o seed 1 dung DUNG luong
+        # so cua user u+1 o seed 0, nen doi seed chi xoay vong cung mot bo luong.
+        # Do that tren ml-latest-small: seed 0..5 ra recall@10 = 0.1115 o 5/6 lan,
+        # va AUC 0.5258 (lech ~2 SE) lap lai o MOI seed -- trong nhu khung danh
+        # gia sai, trong khi chi la mot lan rut xui bi nhan ban.
+        rng = np.random.default_rng([self.seed, int(user_id)])
         return rng.random(len(item_ids))
 
     def explain(self, user_id: int, item_id: int) -> str:

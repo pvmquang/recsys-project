@@ -117,6 +117,11 @@ def user_activity_groups(
     dung thang o nhom thua, loc cong tac thang o nhom day, va lai ghep kieu
     chuyen dich bam duoc duong bao tren cua ca hai. Khong tach nhom thi ca ba
     ket luan do deu khong kiem chung duoc.
+
+    Nguong CO DINH chi co nghia tren du lieu co user thua that, hoac sau khi cat
+    bot lich su de tao cold-start. Tren ml-latest-small (moi user >= 20 rating),
+    nhom '5-20' chi la 29 user co 19-20 tuong tac -- runner vi vay chia theo
+    PHAN VI (xem `runner._by_activity`).
     """
     counts = train.groupby("user_id").size()
     labels = []

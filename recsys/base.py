@@ -1,6 +1,6 @@
 """Hop dong chung cho MOI mo hinh goi y trong do an.
 
-Tam bac mo hinh B0-B8 deu cai dat dung lop nay. Khung danh gia
+Chin bac mo hinh B0-B8 deu cai dat dung lop nay. Khung danh gia
 (recsys/eval/) chi biet den lop nay, khong biet ben trong mo hinh la gi.
 
 => Ba thanh vien lam song song tu tuan 3 ma khong giam chan nhau,
@@ -69,7 +69,17 @@ class Recommender(ABC):
     def recommend(
         self, user_id: int, k: int = 10, exclude_seen: bool = True
     ) -> list[int]:
-        """Tra ve top-k item cho `user_id`, da xep hang giam dan."""
+        """Tra ve top-k item cho `user_id`, da xep hang giam dan.
+
+        Item diem -inf (khong co bang chung) KHONG bao gio duoc tra ve, nen danh
+        sach co the NGAN HON k, ke ca rong. Lap cho du k bang item -inf la goi y
+        nhung phim chon tuy y (argpartition giua cac diem bang nhau) ma trong y
+        het goi y that -- va chung con duoc dem vao coverage.
+        Do that: 1 user khong co lang gieng UserKNN nhan 20 phim nhu vay.
+
+        Danh sach rong la tin hieu cho bac lai ghep (B7) chuyen sang mo hinh
+        khac, khong phai loi.
+        """
         items = self.all_items_
         if exclude_seen:
             seen = self.seen_.get(user_id, set())
@@ -78,6 +88,10 @@ class Recommender(ABC):
         if len(items) == 0:
             return []
         scores = self.score(user_id, items)
+        ok = np.isfinite(scores)
+        items, scores = items[ok], scores[ok]
+        if len(items) == 0:
+            return []
         k = min(k, len(items))
         # argpartition lay k phan tu lon nhat trong O(n), roi moi sap xep k cai do.
         top = np.argpartition(-scores, k - 1)[:k]
