@@ -1,0 +1,31 @@
+# Checklist 3.2: chay pytest moi lan push / mo PR.
+# Test KHONG goi mang va khong can MovieLens -- moi bai dung du lieu do choi.
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Nhom chay ca Windows lan macOS/Linux -- loi duong dan hay ma hoa
+        # chi lo ra tren mot trong hai.
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - name: Cai dung phien ban da ghim
+        run: |
+          python -m pip install -r requirements-lock.txt
+          python -m pip install -e . --no-deps
+      - name: pytest
+        run: python -m pytest -q
