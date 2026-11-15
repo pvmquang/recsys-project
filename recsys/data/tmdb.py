@@ -142,7 +142,9 @@ def build_cache(
     links["tmdb_id"] = links["tmdb_id"].astype(int)
 
     done = _read_cached_ids()
-    todo = [t for t in links["tmdb_id"].tolist() if t not in done]
+    # dict.fromkeys: khu trung ma giu thu tu. links.csv co tmdb_id trung (phim
+    # 6003 va 144606 cung tro toi 4912) -- khong khu thi tai hai lan, ghi hai dong.
+    todo = [t for t in dict.fromkeys(links["tmdb_id"].tolist()) if t not in done]
     if limit is not None:
         todo = todo[:limit]
 
@@ -222,7 +224,13 @@ def load_cache() -> pd.DataFrame:
             if parsed:
                 rows.append(parsed)
 
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    # Cache ghi tu ban truoc co the da co mot tmdb_id hai dong (xem build_cache).
+    # Khong khu thi load_metadata() merge ra HAI dong cho cung mot phim, va B5
+    # dem phim do hai lan ma khong co loi nao bao. Giu ban ghi moi nhat.
+    return df.drop_duplicates("tmdb_id", keep="last").reset_index(drop=True)
 
 
 def _empty_metadata(movies: pd.DataFrame) -> pd.DataFrame:
