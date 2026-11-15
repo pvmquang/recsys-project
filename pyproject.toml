@@ -1,0 +1,35 @@
+# Cai goi `recsys` vao venv de script va test import duoc tu bat ky dau:
+#
+#     pip install -r requirements-lock.txt
+#     pip install -e . --no-deps
+#
+# Phien ban thu vien ghim o requirements-lock.txt, KHONG o day: ba may phai cai
+# cung mot bo phien ban, ma pyproject chi noi "can goi nao".
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recsys"
+version = "0.2.0"
+description = "He goi y phim lai ghep -- do an IT4613"
+requires-python = ">=3.13"
+dependencies = [
+    "pandas",
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "requests",
+    "tqdm",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["recsys*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
