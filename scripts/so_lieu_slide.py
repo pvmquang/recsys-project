@@ -9,11 +9,6 @@ CI chua 0 thi KHONG duoc viet "mo hinh X thang".
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import numpy as np
 import pandas as pd
 

@@ -8,3 +8,5 @@ data/cache/
 reports/*.csv
 reports/*.png
 .ipynb_checkpoints/
+reports/*.meta.json
+*.egg-info/

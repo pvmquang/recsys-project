@@ -107,10 +107,14 @@ def ndcg_at_k(ranked: Sequence[int], relevant: set[int], k: int = 10) -> float:
 
 
 def auc(ranked: Sequence[int], relevant: set[int]) -> float:
-    """Ti le cap (item dung, item sai) duoc xep dung thu tu.
+    """Ti le cap (item dung, item sai) duoc xep dung thu tu -- tinh tu THU TU.
 
     Nhan CA danh sach ung vien, khong cat o k -- AUC do chat luong xep hang
     tren toan bo danh sach, cat di la do mot thu khac.
+
+    ⚠ Ham nay khong biet hai item co diem BANG NHAU hay khong, nen thu tu giua
+    chung (do xao ngau nhien quyet dinh) duoc tinh nhu thu tu that. Runner dung
+    `auc_from_scores()`, khong dung ham nay -- xem ly do o do.
     """
     ranked = list(ranked)
     n = len(ranked)
@@ -129,6 +133,30 @@ def auc(ranked: Sequence[int], relevant: set[int]) -> float:
         else:
             correct_pairs += pos_so_far
     return correct_pairs / (n_pos * n_neg)
+
+
+def auc_from_scores(pos_scores: Sequence[float], neg_scores: Sequence[float]) -> float:
+    """AUC tinh tu DIEM: cap (dung, sai) dung thu tu tinh 1, cap BANG DIEM tinh 0.5.
+
+    VI SAO KHONG TINH TU DANH SACH DA XEP HANG
+    Do that (seed 42): 88% ung vien cua ItemKNN va 72% cua UserKNN co diem -inf
+    (khong lang gieng nao). Tinh AUC tu thu tu sau khi xao ngau nhien thi moi cap
+    (-inf, -inf) duoc dem 0 hoac 1 tuy luot xao -- AUC chu yeu do "item dung co
+    lang gieng khong" va dao dong theo seed xao. Dem cap hoa la 0.5 la dinh nghia
+    chuan (xac suat mot item dung ngau nhien co diem cao hon mot item sai ngau
+    nhien, hoa thi tung dong xu), va KHONG phu thuoc thu tu xao.
+
+    -inf == -inf la hoa (numpy so sanh dung nhu vay). NaN khong duoc phep.
+    """
+    pos = np.asarray(pos_scores, dtype=float).reshape(-1, 1)
+    neg = np.asarray(neg_scores, dtype=float).reshape(1, -1)
+    if pos.size == 0 or neg.size == 0:
+        return 0.0
+    if np.isnan(pos).any() or np.isnan(neg).any():
+        raise ValueError("Diem NaN -- mo hinh phai tra -inf cho item khong bang chung")
+    wins = (pos > neg).sum()
+    ties = (pos == neg).sum()
+    return float((wins + 0.5 * ties) / (pos.size * neg.size))
 
 
 def coverage(all_recommended: Iterable[Iterable[int]], n_items_total: int) -> float:

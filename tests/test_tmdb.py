@@ -171,3 +171,42 @@ def test_client_thieu_khoa_thi_bao_ro_cach_lay(monkeypatch):
     msg = str(exc.value)
     assert "themoviedb.org" in msg  # co duong dan di dang ky
     assert ".env" in msg  # co noi chep file nao
+
+
+class TestKhuTrungTmdbId:
+    """Checklist 3.1: links.csv co hai phim cung tmdb_id 4912."""
+
+    def test_load_cache_khu_dong_trung_giu_ban_moi(self, tmp_path, monkeypatch):
+        import json
+
+        f = tmp_path / "cache.jsonl"
+        old = {**PAYLOAD, "overview": "ban cu"}
+        new = {**PAYLOAD, "overview": "ban moi"}
+        f.write_text(json.dumps(old) + "\n" + json.dumps(new) + "\n", encoding="utf-8")
+        monkeypatch.setattr(tmdb, "CACHE_FILE", f)
+
+        df = tmdb.load_cache()
+        assert len(df) == 1
+        assert df.loc[0, "overview"] == "ban moi"
+
+    def test_build_cache_khong_tai_mot_tmdb_id_hai_lan(self, tmp_path, monkeypatch):
+        links = pd.DataFrame(
+            {"item_id": [6003, 144606, 1], "imdb_id": [1, 2, 3], "tmdb_id": [4912.0, 4912.0, 862.0]}
+        )
+        monkeypatch.setattr(tmdb.movielens, "load_links", lambda *a, **k: links)
+        monkeypatch.setattr(tmdb, "CACHE_DIR", tmp_path)
+        monkeypatch.setattr(tmdb, "CACHE_FILE", tmp_path / "cache.jsonl")
+
+        fetched = []
+
+        class FakeClient:
+            def __init__(self, *a, **k):
+                pass
+
+            def fetch_movie(self, tmdb_id):
+                fetched.append(tmdb_id)
+                return {"overview": "x"}
+
+        monkeypatch.setattr(tmdb, "TmdbClient", FakeClient)
+        tmdb.build_cache()
+        assert fetched == [4912, 862]
