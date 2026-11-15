@@ -34,7 +34,7 @@ from recsys.eval.provenance import save_result
 from recsys.eval.runner import MAIN_K, evaluate
 from recsys.eval.stats import bootstrap_ci, is_significant, paired_diff_ci
 from recsys.models.baselines import Popularity, RandomRec
-from recsys.models.knn import ItemKNN, UserKNN
+from recsys.models.knn import K_ITEM, K_USER, ItemKNN, UserKNN
 
 K = MAIN_K
 SEED = 42
@@ -46,7 +46,7 @@ POP, IKNN, UKNN = "B0-Popularity", "B1-ItemKNN", "B2-UserKNN"
 
 
 def make_models() -> dict:
-    return {POP: Popularity(), IKNN: ItemKNN(k=40), UKNN: UserKNN(k=40)}
+    return {POP: Popularity(), IKNN: ItemKNN(k=K_ITEM), UKNN: UserKNN(k=K_USER)}
 
 
 def fmt_ci(ci) -> str:
@@ -61,7 +61,7 @@ def fmt_diff(ci) -> str:
 
 
 def _save(df: pd.DataFrame, name: str) -> None:
-    save_result(df, OUT_DIR / name, seed=SEED, dataset="ml-latest-small", k=40,
+    save_result(df, OUT_DIR / name, seed=SEED, dataset="ml-latest-small", k_item=K_ITEM, k_user=K_USER,
                 n_folds=N_FOLDS, n_giu=list(N_KEEP))
     print(f"\nĐã ghi: `{OUT_DIR / name}`")
 
@@ -202,7 +202,8 @@ def main() -> None:
     ratings = movielens.load_ratings()
     split = leave_one_out(ratings, seed=SEED)
     print(f"# Thí nghiệm giao thức (đợt 2)\n\nml-latest-small · seed {SEED} · "
-          f"k láng giềng = 40 · {len(split.users)} user kiểm tra")
+          f"k láng giềng: ItemKNN {K_ITEM}, UserKNN {K_USER} (chọn trên validation) · "
+          f"{len(split.users)} user kiểm tra")
     if args.chi in (None, "2.4"):
         toan_danh_muc(split)
     if args.chi in (None, "2.8"):

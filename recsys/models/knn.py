@@ -44,6 +44,15 @@ from recsys.base import Recommender
 #: khac, va item khong bang chung se leo len dau danh sach (xem Recommender.score).
 _NO_EVIDENCE = -np.inf
 
+#: So lang gieng CHON TREN VALIDATION (checklist 2.1), ml-latest-small, seed 42,
+#: nDCG@10. Moi script lay k tu day -- mot cho duy nhat, khong go tay o tung noi.
+#: `python scripts/exp_knn.py` (thi nghiem 3) chay lai phep chon va CANH BAO neu
+#: ket qua khac hai so nay. Doi du lieu hay doi giao thuc thi chay lai roi sua o day.
+#:   ItemKNN  k=40: 0.4648   k=80: 0.4768   k=160: 0.4751
+#:   UserKNN  k=20: 0.4225   k=40: 0.4441   k=80:  0.4334
+K_ITEM = 80
+K_USER = 40
+
 
 def build_matrix(train: pd.DataFrame):
     """Ma tran thua user x item + hai bang tra chi so.
