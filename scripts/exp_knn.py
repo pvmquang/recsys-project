@@ -18,32 +18,29 @@ phai lay tu do, khong chep tu terminal.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
 
 from recsys.data import movielens
 from recsys.data.split import leave_one_out
+from recsys.eval.provenance import save_result
 from recsys.eval.runner import MAIN_K, evaluate
 from recsys.models.baselines import Popularity
 from recsys.models.knn import ItemKNN, UserKNN
 
 OUT_DIR = Path("reports")
+SEED = 42
 
 
 def _save(df: pd.DataFrame, name: str) -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUT_DIR / name
-    df.to_csv(path)
+    path = save_result(df, OUT_DIR / name, seed=SEED, dataset="ml-latest-small", k=40)
     print(f"Da ghi: {path}")
 
 
 def main() -> None:
     ratings = movielens.load_ratings()
-    split = leave_one_out(ratings)
+    split = leave_one_out(ratings, seed=SEED)
     print(movielens.describe(ratings))
     print(split.summary())
 
