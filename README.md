@@ -12,7 +12,7 @@ python -m venv .venv
 pip install -r requirements-lock.txt   # đúng phiên bản đã ghim, ba máy như nhau
 pip install -e . --no-deps             # cài gói recsys, script import được từ mọi nơi
 
-pytest -q                       # 165 test, không gọi mạng
+pytest -q                       # 181 test, không gọi mạng
 python scripts/run_eval.py      # tự tải MovieLens ở lần chạy đầu
 ```
 
@@ -34,15 +34,19 @@ python scripts/so_lieu_slide.py   # mọi số dưới đây, kèm CI 95%
 |---|---|---|---|---|---|
 | B0-Random | 0.1180 | 0.0538 | 0.0561 | 0.4956 | 0.4664 |
 | B0-Popularity | 0.5967 | 0.3590 | 0.3019 | 0.8315 | 0.0126 |
-| **B1-ItemKNN** (k=80) | **0.6803** | **0.4761** | **0.4225** | 0.8342 | 0.0749 |
+| B1-ItemKNN (k=80) | 0.6803 | 0.4761 | 0.4225 | 0.8342 | 0.0749 |
 | B2-UserKNN (k=40) | 0.6443 | 0.4214 | 0.3647 | 0.8310 | 0.0288 |
+| **B3-MF** implicit (f=32) | **0.7279** | **0.5003** | **0.4386** | 0.8605 | 0.1006 |
 
-Số láng giềng k chọn trên tập validation (xem [Giao thức](#giao-thức-đánh-giá)).
+Số láng giềng k và siêu tham số của MF chọn trên tập validation (xem
+[Giao thức](#giao-thức-đánh-giá)). Dòng B3 lấy từ `scripts/exp_mf.py`, xem
+[phần B3](#bậc-b3-phân-rã-ma-trận).
 AUC tính từ điểm, cặp bằng điểm tính 0.5. Coverage là coverage@10, cùng k với
 các cột bên cạnh.
 
 **Cả bảng này đo trên 1 phim đúng + 99 phim âm lấy mẫu.** Trên toàn danh mục,
-chỉ còn ItemKNN hơn Popularity có ý nghĩa, và sát ngưỡng. Xem
+chỉ còn ItemKNN và MF hơn Popularity có ý nghĩa, và đều sát ngưỡng. MF với ItemKNN
+thì hòa. Xem
 [phần đo thêm ở dưới](#đo-thêm-toàn-danh-mục-auc-cold-start).
 
 **Kiểm tra bằng Random không phát hiện lỗi khung đo.** Qua 10 seed: recall@10
@@ -227,7 +231,31 @@ nhất, đo nDCG@10 trên đủ 610 user:
 ItemKNN có ý nghĩa ở 3 và 5 tương tác, hòa ở 10, thua ở lịch sử đầy đủ. Với 1
 tương tác, UserKNN không có láng giềng nào (Pearson của một rating là không xác
 định), và Popularity thắng cả hai. Đây là căn cứ đo được cho lai ghép kiểu chuyển
-ở B7.
+ở B7. MF ở B3 làm căn cứ này yếu đi, xem phần dưới.
+
+## Bậc B3: phân rã ma trận
+
+```bash
+python scripts/exp_mf.py   # ~15-20 phút, ghi reports/exp_mf_*.csv
+```
+
+Cài trong [recsys/models/mf.py](recsys/models/mf.py) bằng numpy, huấn luyện bằng ALS. Số
+đầy đủ kèm CI và kết luận: [docs/so-lieu-b3.md](docs/so-lieu-b3.md).
+
+- **Hai chế độ.** `implicit` học việc user có xem hay không, dùng cho top-K, là mặc
+  định. `explicit` học rating có bias, dùng cho MAE/RMSE. Siêu tham số chọn trên
+  validation: implicit f = 32, reg = 10, alpha = 10; explicit f = 32, reg = 30.
+- **MF implicit nhỉnh hơn ItemKNN, sát ngưỡng.** nDCG@10 +0.024, CI [+0.002, +0.046]
+  khi lấy mẫu. Trên toàn danh mục chênh lệch này là nhiễu. MF hơn Popularity có ý
+  nghĩa ở cả hai giao thức.
+- **MF phủ danh mục rộng hơn KNN** (coverage@10 10,1% so với 7,5%), dù chính xác hơn.
+- **MF explicit thua Popularity** khi xếp hạng (nDCG@10 −0.100 khi lấy mẫu). Cùng bài
+  học với `weighted` của KNN.
+- **Cold-start:** MF hơn cả hai KNN ở mọi độ dài lịch sử, kể cả 1 tương tác. Ở 1
+  tương tác, MF hòa Popularity (+0.029, CI chứa 0).
+- **Câu giải thích là phân rã chính xác.** Điểm của phim gợi ý bằng đúng tổng đóng góp
+  của các phim user đã xem (`MF.contributions()`). `explain()` nêu ba phim đóng góp
+  nhiều nhất.
 
 ## Metadata TMDB
 
@@ -272,15 +300,18 @@ recsys/
   eval/provenance.py   ghi CSV kèm .meta.json: seed, git commit, phiên bản thư viện
   models/baselines.py  B0 — Popularity, Random
   models/knn.py        B1 — Item-KNN · B2 — User-KNN (Pearson), k đã chọn
+  models/mf.py         B3 — phân rã ma trận ALS, implicit và explicit
 scripts/run_eval.py    CLI chạy so sánh
 scripts/fetch_tmdb.py  tải metadata TMDB về cache
 scripts/exp_knn.py     ba thí nghiệm của bậc B1/B2, chọn k trên validation
 scripts/exp_giao_thuc.py  toàn danh mục, tách AUC, cold-start (checklist 2.4/2.5/2.8)
+scripts/exp_mf.py      thí nghiệm B3: chọn siêu tham số, bảng test, cold-start
 scripts/so_lieu_slide.py  mọi số cho slide, kèm CI 95% (in Markdown)
-tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN (165 test)
+tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF (181 test)
 docs/checklist.md      việc cần sửa, chia đợt, có người phụ trách
 docs/so-lieu-slide.md  số liệu và câu cần sửa cho từng slide
 docs/so-lieu-dot-2.md  số liệu và kết luận của 2.4, 2.5, 2.8
+docs/so-lieu-b3.md     số liệu và kết luận của B3
 ```
 
 ## Mã nguồn và dữ liệu tái sử dụng
