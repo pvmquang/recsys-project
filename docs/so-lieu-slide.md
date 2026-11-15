@@ -1,7 +1,13 @@
 # Số liệu và câu cần sửa cho slide
 
-Dành cho người làm slide. Số chạy trên nhánh `fix/dot-1-truoc-trinh-bay`, sau khi
-sửa xong checklist 1.1–1.7 và 1.9. Các mục S1–S5 tương ứng [checklist.md](checklist.md).
+Dành cho người làm slide. Số chạy sau khi sửa xong checklist 1.1-1.7, 1.9 và 2.5
+(AUC tính hòa = 0.5: chỉ cột AUC đổi, các cột khác giữ nguyên). Các mục S1-S5 tương
+ứng [checklist.md](checklist.md).
+
+> **Đọc trước khi chốt slide 11:** đo trên toàn danh mục (checklist 2.4), lợi thế nDCG
+> của ItemKNN so với Popularity thành nhiễu. Câu "+32% nDCG" vẫn đúng *với giao thức
+> lấy mẫu 99 phim âm*, nên trên slide phải ghi kèm giao thức đó. Xem
+> [so-lieu-dot-2.md](so-lieu-dot-2.md).
 
 Phần **"Sửa gì trên từng slide"** dưới đây là gợi ý. Phần **"Số liệu chi tiết"** là output
 nguyên văn của `python scripts/so_lieu_slide.py` — lấy số từ đó, đừng lấy từ README cũ.
@@ -35,6 +41,10 @@ Ghi chú bắt buộc trên slide: *nhóm thưa nhất vẫn có ≥ 19 tương 
 cách cắt bớt lịch sử (đợt 2)*. **Bỏ** việc dùng bảng này làm căn cứ cho B7 và cho kịch bản
 "Người dùng mới" ở slide 5.
 
+Cold-start thật đã đo xong (checklist 2.8). Nếu slide 5 hoặc 7 cần căn cứ cho B7 thì lấy từ
+[so-lieu-dot-2.md](so-lieu-dot-2.md): với 3-10 tương tác, UserKNN hơn ItemKNN, và ItemKNN
+thua cả Popularity cho tới khoảng 10 tương tác.
+
 ### Slide 10 — thay [Phim A], [Phim B] (S4)
 
 Dùng một trong ba ví dụ thật ở mục **"Ví dụ câu giải thích thật"** cuối file. Ví dụ dễ hiểu nhất là
@@ -53,8 +63,10 @@ Tên phim MovieLens ghi kiểu "Terminator, The (1984)" — viết lại thành 
    AUC = **0.503 ± 0.012** (kỳ vọng 0.10 và 0.50). Số cũ AUC 0.5258 là do lỗi seed, đã sửa.
 4. **Bỏ các câu về AUC**: "UserKNN thắng AUC", "Popularity AUC cao hơn ItemKNN — hay ở toàn
    cục, dở ở đỉnh". Hai chênh lệch so với Popularity đều là nhiễu. Chênh ItemKNN − UserKNN
-   có ý nghĩa nhưng nhiều khả năng do cách xử lý thế hòa (88% ứng viên của ItemKNN có điểm
-   bằng nhau) — chưa nên đưa lên slide.
+   có ý nghĩa (−0.018) cả khi đã tính hòa = 0.5 (checklist 2.5). Nguyên nhân:
+   ItemKNN không chấm được 29% phim đúng (UserKNN 17,5%), nhưng khi chấm được thì
+   xếp *tốt hơn* (AUC 0.974 so với 0.936). Nếu cần nói về AUC thì nói câu đó, đừng viết
+   "UserKNN xếp hạng tốt hơn". Chi tiết: [so-lieu-dot-2.md](so-lieu-dot-2.md).
 5. **Câu nên giữ / nên viết** (đều có ý nghĩa thống kê):
    - ItemKNN hơn Popularity **+0.114 nDCG@10 (+32%)** và phủ danh mục **gấp 6 lần** (7,7% so với 1,25%).
    - ItemKNN hơn UserKNN **+0.051 nDCG@10**.
@@ -75,9 +87,9 @@ ml-latest-small · seed 42 · k láng giềng = 40 · 610 user kiểm tra · 1 p
 | Mô hình | recall@10 | ndcg@10 | MRR | AUC | coverage@10 | coverage@20 |
 |---|---|---|---|---|---|---|
 | B0-Random | 0.1180 [0.0934, 0.1443] | 0.0538 [0.0415, 0.0673] | 0.0561 | 0.4956 [0.4729, 0.5187] | 0.4670 | 0.7138 |
-| B0-Popularity | 0.6033 [0.5623, 0.6410] | 0.3603 [0.3317, 0.3891] | 0.3015 | 0.8319 [0.8117, 0.8506] | 0.0125 | 0.0199 |
-| B1-ItemKNN | 0.6754 [0.6377, 0.7115] | 0.4744 [0.4422, 0.5053] | 0.4203 | 0.8205 [0.7970, 0.8426] | 0.0768 | 0.1089 |
-| B2-UserKNN | 0.6508 [0.6131, 0.6869] | 0.4238 [0.3938, 0.4528] | 0.3662 | 0.8412 [0.8221, 0.8594] | 0.0288 | 0.0449 |
+| B0-Popularity | 0.6033 [0.5623, 0.6410] | 0.3603 [0.3317, 0.3891] | 0.3015 | 0.8307 [0.8100, 0.8492] | 0.0125 | 0.0199 |
+| B1-ItemKNN | 0.6754 [0.6377, 0.7115] | 0.4744 [0.4422, 0.5053] | 0.4203 | 0.8182 [0.7980, 0.8369] | 0.0768 | 0.1089 |
+| B2-UserKNN | 0.6508 [0.6131, 0.6869] | 0.4238 [0.3938, 0.4528] | 0.3662 | 0.8366 [0.8174, 0.8535] | 0.0288 | 0.0449 |
 
 ### B0-Random qua 10 seed (kỳ vọng: recall@10 = 0.10, AUC = 0.50)
 
@@ -97,9 +109,9 @@ ml-latest-small · seed 42 · k láng giềng = 40 · 610 user kiểm tra · 1 p
 | B1-ItemKNN − B0-Popularity | recall@10 | +0.0721 | [+0.0410, +0.1033] | **có ý nghĩa** |
 | B2-UserKNN − B0-Popularity | recall@10 | +0.0475 | [+0.0213, +0.0770] | **có ý nghĩa** |
 | B1-ItemKNN − B2-UserKNN | recall@10 | +0.0246 | [-0.0049, +0.0557] | nhiễu (CI chứa 0) |
-| B1-ItemKNN − B0-Popularity | auc | -0.0114 | [-0.0300, +0.0080] | nhiễu (CI chứa 0) |
-| B2-UserKNN − B0-Popularity | auc | +0.0093 | [-0.0056, +0.0244] | nhiễu (CI chứa 0) |
-| B1-ItemKNN − B2-UserKNN | auc | -0.0207 | [-0.0386, -0.0021] | **có ý nghĩa** |
+| B1-ItemKNN − B0-Popularity | auc | -0.0124 | [-0.0290, +0.0045] | nhiễu (CI chứa 0) |
+| B2-UserKNN − B0-Popularity | auc | +0.0060 | [-0.0075, +0.0206] | nhiễu (CI chứa 0) |
+| B1-ItemKNN − B2-UserKNN | auc | -0.0184 | [-0.0344, -0.0024] | **có ý nghĩa** |
 
 ### Theo nhóm user (phân vị số tương tác trong train) — ndcg@10
 

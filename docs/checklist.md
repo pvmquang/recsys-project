@@ -117,15 +117,21 @@ một lần, rồi chạy lại toàn bộ.
     một giây. Item test khi đó do `item_id` lớn nhất quyết định — thiên về phim mới.
   - Phá hòa ngẫu nhiên theo seed, hoặc ghi rõ thành hạn chế.
 
-- [ ] **2.4 Đánh giá thêm trên toàn danh mục** · @... · *FB#5 + RV*
+- [x] **2.4 Đánh giá thêm trên toàn danh mục** · @... · *FB#5 + RV*
   - Trung vị độ phổ biến: item đúng 39 lượt, item âm 3 lượt → lấy mẫu đều có lợi cho
     Popularity. Xem Krichene & Rendle, KDD 2020.
   - 610 user × 9.724 phim vẫn chạy nhanh. Bảng cuối kỳ có thêm một bảng này.
+  - Kết quả: `evaluate(..., full_catalog=True)`, `run_eval.py --full-catalog`. Mọi chênh
+    nDCG@10 giữa Popularity/ItemKNN/UserKNN thành nhiễu (25-35/610 user trúng top-10).
+    Xem [so-lieu-dot-2.md](so-lieu-dot-2.md).
 
-- [ ] **2.5 AUC xử lý thế hòa + báo tỉ lệ ứng viên `-inf`** · @... · *RV*
+- [x] **2.5 AUC xử lý thế hòa + báo tỉ lệ ứng viên `-inf`** · @... · *RV*
   - Ứng viên điểm `-inf`: ItemKNN 87.9%, UserKNN 71.9%, Popularity 0.3%.
     AUC của KNN chủ yếu đo "item đúng có láng giềng không".
   - Tính AUC từ điểm, cặp bằng nhau tính 0.5.
+  - Kết quả: `metrics.auc_from_scores`, cột `vo_cuc` trong runner. AUC chỉ đổi ở chữ số
+    thứ ba, ItemKNN − UserKNN vẫn có ý nghĩa. Nguyên nhân: ItemKNN không chấm được 29% phim
+    đúng (UserKNN 17,5%). Khi chấm được, ItemKNN xếp tốt hơn (AUC 0.974 so với 0.936).
 
 - [ ] **2.6 Ghi vào báo cáo: 23/610 item test không có trong train** · @... · *RV*
   - Không mô hình lọc cộng tác nào đoán được → recall có trần ~96%.
@@ -134,18 +140,20 @@ một lần, rồi chạy lại toàn bộ.
   - Leave-one-out theo từng user vẫn để train chứa tương lai của user khác
     (Ji et al., 2020). Phương án mạnh hơn: cắt theo một mốc thời gian chung.
 
-- [ ] **2.8 Đo cold-start thật** · @... · *FB#1*
+- [x] **2.8 Đo cold-start thật** · @... · *FB#1*
   - Cắt lịch sử train của một phần user xuống 1, 3, 5 tương tác rồi đo lại.
     Đây mới là căn cứ cho B7.
+  - Kết quả: `split.truncate_history`, `scripts/exp_giao_thuc.py`. UserKNN hơn ItemKNN có
+    ý nghĩa ở 3/5/10 tương tác, đảo chiều ở lịch sử đầy đủ; Popularity tốt nhất ở 1 tương tác.
 
 ---
 
 ## Đợt 3 — Khi rảnh
 
-- [ ] **3.1 Khử trùng `tmdb_id`** · @... · *RV*
+- [x] **3.1 Khử trùng `tmdb_id`** · @... · *RV*
   - `links.csv` có 1 `tmdb_id` trùng → `build_cache` tải 2 lần → `load_metadata`
     nhân đôi dòng. Khử trùng `todo` và `drop_duplicates("tmdb_id")` trong `load_cache`.
-- [ ] **3.2 CI GitHub Actions chạy `pytest`** · @... · *RV*
-- [ ] **3.3 `pyproject.toml` + `pip install -e .`**, bỏ `sys.path.insert` trong script · @... · *RV*
-- [ ] **3.4 README hướng dẫn cài bằng `requirements-lock.txt`** để 3 máy cùng phiên bản · @... · *RV*
-- [ ] **3.5 Lưu kết quả kèm seed + git commit hash** · @... · *RV*
+- [x] **3.2 CI GitHub Actions chạy `pytest`** · @... · *RV*
+- [x] **3.3 `pyproject.toml` + `pip install -e .`**, bỏ `sys.path.insert` trong script · @... · *RV*
+- [x] **3.4 README hướng dẫn cài bằng `requirements-lock.txt`** để 3 máy cùng phiên bản · @... · *RV*
+- [x] **3.5 Lưu kết quả kèm seed + git commit hash** · @... · *RV*
