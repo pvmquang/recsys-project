@@ -17,7 +17,7 @@ from recsys.data.split import leave_one_out
 from recsys.eval.runner import MAIN_K, evaluate
 from recsys.eval.stats import bootstrap_ci, is_significant, paired_diff_ci
 from recsys.models.baselines import Popularity, RandomRec
-from recsys.models.knn import ItemKNN, UserKNN
+from recsys.models.knn import K_ITEM, K_USER, ItemKNN, UserKNN
 
 K = MAIN_K
 SEED = 42
@@ -44,8 +44,8 @@ def main() -> None:
     models = {
         "B0-Random": RandomRec(),
         "B0-Popularity": Popularity(),
-        "B1-ItemKNN": ItemKNN(k=40, titles=titles),
-        "B2-UserKNN": UserKNN(k=40),
+        "B1-ItemKNN": ItemKNN(k=K_ITEM, titles=titles),
+        "B2-UserKNN": UserKNN(k=K_USER),
     }
     res, pu = {}, {}
     for name, model in models.items():
@@ -55,7 +55,8 @@ def main() -> None:
         res[name] = r
 
     print(f"# Số liệu cho slide\n")
-    print(f"ml-latest-small · seed {SEED} · k láng giềng = 40 · "
+    print(f"ml-latest-small · seed {SEED} · k láng giềng: ItemKNN {K_ITEM}, "
+          f"UserKNN {K_USER} (chọn trên validation) · "
           f"{len(split.users)} user kiểm tra · 1 phim đúng + 99 phim âm\n")
 
     # ---- Bang chinh -------------------------------------------------------
@@ -115,11 +116,11 @@ def main() -> None:
         print(f"| {g} | {groups.loc[g, 'so_user']} | {cells} | {fmt_diff(ci).replace(' | ', ' ')} |")
 
     # ---- Quet k: 40 vs 80 -------------------------------------------------
-    print(f"\n## Số láng giềng k = 40 so với k = 80 (ItemKNN, ndcg@{K})\n")
-    k80 = evaluate(ItemKNN(k=80).fit(split.train), split, keep_per_user=True)["per_user"]
-    ci = paired_diff_ci(k80[f"ndcg@{K}"], pu["B1-ItemKNN"][f"ndcg@{K}"])
+    print(f"\n## k chọn trên validation so với k = 40 cũ (ItemKNN, ndcg@{K}, tập test)\n")
+    k40 = evaluate(ItemKNN(k=40).fit(split.train), split, keep_per_user=True)["per_user"]
+    ci = paired_diff_ci(pu["B1-ItemKNN"][f"ndcg@{K}"], k40[f"ndcg@{K}"])
     print("| So sánh | chênh lệch | CI 95% | kết luận |\n|---|---|---|---|")
-    print(f"| k=80 − k=40 | {fmt_diff(ci)} |")
+    print(f"| k={K_ITEM} − k=40 | {fmt_diff(ci)} |")
 
     # ---- Vi du explain ----------------------------------------------------
     print("\n## Ví dụ câu giải thích thật (cho slide 10)\n")
@@ -149,8 +150,14 @@ def main() -> None:
     unseen = sum(1 for i in split.test.values() if i not in train_items)
     print("\n## Hạn chế của giao thức (cho slide 4 và 8)\n")
     print(f"- {int((tie > 1).sum())}/{len(tie)} user có nhiều phim trùng timestamp cuối "
-          f"(nhiều nhất {int(tie.max())} phim cùng một giây) → phim test do phá hòa theo item_id.")
+          f"(nhiều nhất {int(tie.max())} phim cùng một giây) → phim test chọn ngẫu nhiên theo seed "
+          f"trong nhóm trùng.")
     print(f"- {unseen}/{len(split.test)} phim test chưa từng xuất hiện trong train.")
+    rating_of = ratings.set_index(["user_id", "item_id"])["rating"]
+    r_test = np.array([rating_of[(u, i)] for u, i in split.test.items()])
+    print(f"- {(r_test < 3).mean():.1%} phim test bị user chấm dưới 3 sao "
+          f"({(r_test <= 2).mean():.1%} từ 2 sao trở xuống): bài toán là dự đoán "
+          "tương tác, không phải dự đoán sở thích.")
     print("- Train vẫn chứa tương tác về sau của user KHÁC (ví dụ số đếm của Popularity).")
 
 

@@ -6,16 +6,17 @@ quả hiện có, [docs/checklist.md](docs/checklist.md) để biết việc cò
 
 ## Git: người dùng tự commit
 
-Không chạy `git commit`, `git push`, không mở PR. Làm xong thì đưa người dùng:
+Không chạy `git commit`, `git push`, không mở PR. Làm xong thì viết thẳng trong câu trả lời,
+cho từng commit:
 
-1. Danh sách commit đề xuất, mỗi commit một mục đích, kèm đúng các file cần `git add`.
-2. Message cho từng commit, ghi ra file UTF-8 để chạy `git commit -F <file>`.
-   Truyền tiếng Việt qua pipe trong PowerShell 5.1 làm hỏng dấu.
+1. Danh sách file cần `git add`, mỗi commit một mục đích.
+2. Message chỉ MỘT dòng, không body, không trailer.
 
-Quy ước message (xem `git log`): `type(scope): mô tả` bằng tiếng Việt có dấu, thể mệnh
-lệnh, dòng đầu tối đa 50 ký tự. Body nói vì sao phải đổi. Dòng cuối body ghi mã mục
-checklist, ví dụ `Checklist 2.4, 2.8.` Scope đang dùng: `core`, `data`, `eval`, `models`,
-`scripts`, `base`.
+Không ghi message ra file, không đưa lệnh `git commit -F`.
+
+Quy ước message: `type(scope): mô tả` bằng tiếng Việt có dấu, thể mệnh lệnh, tối đa 72 ký
+tự, có thể kèm mã mục checklist cuối dòng, ví dụ `(2.1, 2.3)`. Scope đang dùng: `core`,
+`data`, `eval`, `models`, `scripts`, `base`.
 
 Làm trên nhánh riêng, PR vào `main`. `graphify-out/` là output của công cụ ngoài, không
 đưa vào commit.
@@ -53,16 +54,22 @@ Cài mới: `pip install -r requirements-lock.txt` rồi `pip install -e . --no-
 - `score()` trả `-inf` cho item không có bằng chứng, không trả 0.
 - Mô hình không tự đọc file hay gọi mạng. Dữ liệu phụ (ví dụ tên phim) truyền qua tham số.
 - `seed = 42` cho mọi phép chia. Mọi mô hình đo trên cùng một `Split`.
-- Mục checklist có dấu biểu quyết (2.1, 2.2, 2.3) đổi số của mọi bậc. Không tự làm, phải
-  hỏi người dùng trước.
+- Siêu tham số chọn trên `split.validation()` (tương tác áp chót), báo cáo trên test. Không
+  chọn trên test. k của KNN nằm ở `K_ITEM`, `K_USER` trong `recsys/models/knn.py`.
+  Mô hình mới có siêu tham số thì làm theo cùng cách và ghi giá trị đã chọn vào một hằng số.
+- Bài toán là dự đoán tương tác, không phải dự đoán sở thích (16,2% phim test dưới 3 sao).
+- Thay đổi nào làm đổi số của mọi bậc (giao thức chia, cách chọn item âm, độ đo) thì hỏi
+  người dùng trước, vì cả nhóm phải đồng ý.
 
 ## Số liệu
 
 - Số trong README và `docs/` phải lấy từ output của script, không chép từ terminal của một
   lần chạy thử. Phần "Số liệu chi tiết" trong `docs/so-lieu-*.md` là output nguyên văn.
 - Chênh lệch có CI 95% chứa 0 thì không viết "mô hình X thắng".
-- Bảng chính đo trên 1 phim đúng + 99 phim âm lấy mẫu. Trên toàn danh mục, các chênh lệch
-  nDCG@10 giữa B0-B2 là nhiễu. Câu nào trích bảng chính phải ghi kèm giao thức.
+- Bảng chính đo trên 1 phim đúng + 99 phim âm lấy mẫu. Trên toàn danh mục, chênh lệch
+  nDCG@10 co lại khoảng 8 lần. Câu nào trích bảng chính phải ghi kèm giao thức.
+- Chênh lệch có CI sát 0 có thể lật khi đổi k hay cách phá hòa (đã xảy ra ở đợt 2, xem
+  `docs/so-lieu-dot-2.md`). Viết chúng ở dạng "nhỏ, sát ngưỡng", không viết thành kết luận.
 - Kiểm tra khung đo bằng B0-Random qua 10 seed: recall@10 phải quanh 0.10, AUC quanh 0.50.
   Sửa code đo mà hai số này lệch thì lỗi nằm ở khung đo.
 - Sửa `recsys/eval/` hoặc `recsys/data/split.py` thì chạy lại `so_lieu_slide.py`, so sánh

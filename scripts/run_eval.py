@@ -17,14 +17,14 @@ from recsys.data.split import leave_one_out
 from recsys.eval.provenance import save_result
 from recsys.eval.runner import compare, format_table
 from recsys.models.baselines import Popularity, RandomRec
-from recsys.models.knn import ItemKNN, UserKNN
+from recsys.models.knn import K_ITEM, K_USER, ItemKNN, UserKNN
 
 # Dang ky mo hinh o day. Tuan 3 tro di, moi bac moi them mot dong.
 MODELS = [
     RandomRec(),
     Popularity(),
-    ItemKNN(k=40),
-    UserKNN(k=40),
+    ItemKNN(k=K_ITEM),  # k chon tren validation, xem knn.K_ITEM
+    UserKNN(k=K_USER),
 ]
 
 

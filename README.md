@@ -12,7 +12,7 @@ python -m venv .venv
 pip install -r requirements-lock.txt   # đúng phiên bản đã ghim, ba máy như nhau
 pip install -e . --no-deps             # cài gói recsys, script import được từ mọi nơi
 
-pytest -q                       # 151 test, không gọi mạng
+pytest -q                       # 165 test, không gọi mạng
 python scripts/run_eval.py      # tự tải MovieLens ở lần chạy đầu
 ```
 
@@ -24,7 +24,7 @@ lệch giữa ba máy. Thêm thư viện mới thì sửa `requirements.txt`, c�
 GitHub Actions chạy `pytest` trên Ubuntu và Windows mỗi lần push lên `main` hoặc mở PR
 ([.github/workflows/test.yml](.github/workflows/test.yml)).
 
-## Kết quả hiện có (ml-latest-small, seed 42, k=40)
+## Kết quả hiện có (ml-latest-small, seed 42)
 
 ```bash
 python scripts/so_lieu_slide.py   # mọi số dưới đây, kèm CI 95%
@@ -32,40 +32,41 @@ python scripts/so_lieu_slide.py   # mọi số dưới đây, kèm CI 95%
 
 | Mô hình | recall@10 | ndcg@10 | MRR | AUC | coverage@10 |
 |---|---|---|---|---|---|
-| B0-Random | 0.1180 | 0.0538 | 0.0561 | 0.4956 | 0.4670 |
-| B0-Popularity | 0.6033 | 0.3603 | 0.3015 | 0.8307 | 0.0125 |
-| **B1-ItemKNN** | **0.6754** | **0.4744** | **0.4203** | 0.8182 | 0.0768 |
-| B2-UserKNN | 0.6508 | 0.4238 | 0.3662 | 0.8366 | 0.0288 |
+| B0-Random | 0.1180 | 0.0538 | 0.0561 | 0.4956 | 0.4664 |
+| B0-Popularity | 0.5967 | 0.3590 | 0.3019 | 0.8315 | 0.0126 |
+| **B1-ItemKNN** (k=80) | **0.6803** | **0.4761** | **0.4225** | 0.8342 | 0.0749 |
+| B2-UserKNN (k=40) | 0.6443 | 0.4214 | 0.3647 | 0.8310 | 0.0288 |
 
-Coverage là coverage@10 — cùng k với các cột bên cạnh. (Bản trước ghi
-"coverage" nhưng thực ra là @20.) AUC tính từ điểm, cặp bằng điểm tính 0.5.
+Số láng giềng k chọn trên tập validation (xem [Giao thức](#giao-thức-đánh-giá)).
+AUC tính từ điểm, cặp bằng điểm tính 0.5. Coverage là coverage@10, cùng k với
+các cột bên cạnh.
 
-**Cả bảng này đo trên 1 phim đúng + 99 phim âm lấy mẫu.** Đo trên toàn danh
-mục thì mọi chênh lệch nDCG@10 giữa ba mô hình thành nhiễu. Xem
+**Cả bảng này đo trên 1 phim đúng + 99 phim âm lấy mẫu.** Trên toàn danh mục,
+chỉ còn ItemKNN hơn Popularity có ý nghĩa, và sát ngưỡng. Xem
 [phần đo thêm ở dưới](#đo-thêm-toàn-danh-mục-auc-cold-start).
 
 **Kiểm tra bằng Random không phát hiện lỗi khung đo.** Qua 10 seed: recall@10
-= 0.101 ± 0.012, AUC = 0.503 ± 0.012 — khớp kỳ vọng lý thuyết 0.10 và 0.50.
+= 0.101 ± 0.012, AUC = 0.503 ± 0.012, khớp kỳ vọng lý thuyết 0.10 và 0.50.
 Nếu sau này sửa gì mà hai số này lệch đi, lỗi nằm ở khung đo chứ không ở mô hình.
-(Bản trước gieo seed bằng `seed + user_id` nên mọi seed gần như trùng nhau, và
-một lần rút xui — AUC 0.5258 — lặp lại ở mọi seed.)
 
-**Với giao thức lấy mẫu, cá nhân hóa thắng trên CẢ HAI mặt.** ItemKNN hơn Popularity
-+0.114 nDCG@10 (+32%, CI 95% [+0.091, +0.135]) *và* phủ danh mục gấp 6 lần
-(7,7% ↔ 1,25%). ItemKNN cũng hơn UserKNN +0.051 nDCG@10, CI [+0.028, +0.072].
-Phần phủ danh mục không phụ thuộc giao thức. Phần nDCG thì có, xem dưới.
+**Với giao thức lấy mẫu, ItemKNN hơn Popularity cả về độ chính xác lẫn độ phủ.**
+nDCG@10 hơn +0.117 (+33%, CI 95% [+0.097, +0.139]), phủ danh mục gấp 6 lần
+(7,5% so với 1,26%). ItemKNN cũng hơn UserKNN: +0.055 nDCG@10, CI [+0.034, +0.074],
+và +0.036 recall@10, CI [+0.007, +0.067]. Độ phủ không phụ thuộc giao thức, còn
+nDCG thì có.
 
-**AUC: hai chênh lệch so với Popularity là nhiễu.** Bootstrap ghép cặp theo user:
+**AUC: ba cặp đều là nhiễu.** Bootstrap ghép cặp theo user:
 
 | so sánh AUC | chênh lệch | CI 95% | |
 |---|---|---|---|
-| UserKNN − Popularity | +0.006 | [−0.008, +0.021] | nhiễu |
-| ItemKNN − Popularity | −0.012 | [−0.029, +0.005] | nhiễu |
-| ItemKNN − UserKNN | −0.018 | [−0.034, −0.002] | có ý nghĩa, nhưng xem dưới |
+| ItemKNN − Popularity | +0.003 | [−0.013, +0.018] | nhiễu |
+| UserKNN − Popularity | −0.001 | [−0.014, +0.014] | nhiễu |
+| ItemKNN − UserKNN | +0.003 | [−0.013, +0.019] | nhiễu |
 
-Cặp cuối **không** do thế hòa: đã tính hòa = 0.5 mà vẫn còn. Lý do là ItemKNN không
-chấm được 29% phim đúng (UserKNN 17,5%), nhưng khi chấm được thì xếp *tốt hơn*:
-AUC 0.974 so với 0.936. Viết "UserKNN xếp hạng tốt hơn" là đọc sai con số này.
+Với k = 40, cặp cuối từng có ý nghĩa (−0.018). Đổi sang k = 80 thì mất, vì ItemKNN
+chấm được nhiều phim đúng hơn: tỉ lệ phim đúng bị `-inf` giảm từ 29% xuống 23%.
+AUC ở giao thức này chủ yếu đo *"có ý kiến về phim đúng không"*. Đừng dùng nó để
+xếp hạng mô hình.
 
 ## Thêm một bậc mô hình
 
@@ -86,20 +87,42 @@ thêm một dòng vào `MODELS` trong `scripts/run_eval.py` là đo được nga
 **Đừng đổi hợp đồng này sau tuần 2.** Mỗi lần đổi là phải sửa lại mọi bậc
 đã viết xong, và ba nhánh đang làm song song sẽ không khớp nhau.
 
+Mô hình có siêu tham số thì chọn trên validation, theo cách `exp_knn.py` (thí
+nghiệm 3) chọn k:
+
+```python
+val = split.validation()                              # tương tác áp chót
+for k in (...):
+    evaluate(Model(k).fit(val.train), val)            # chọn ở đây
+evaluate(Model(k_tot).fit(split.train), split)        # báo cáo ở đây
+```
+
 ## Giao thức đánh giá
 
 Leave-one-out **theo thời gian**: tương tác cuối cùng của mỗi user vào tập
 kiểm tra, chấm điểm trên 1 phim đúng trộn với 99 phim lấy ngẫu nhiên.
 
-Không dùng chia ngẫu nhiên — nó cho mô hình nhìn thấy tương lai của chính
+Không dùng chia ngẫu nhiên, vì nó cho mô hình nhìn thấy tương lai của chính
 user đó, làm mọi chỉ số cao lên một cách giả tạo.
+
+Ba quyết định cả nhóm đã chốt (checklist 2.1-2.3):
+
+- **Validation là tương tác áp chót** của mỗi user. Siêu tham số chọn trên
+  validation, rồi huấn luyện trên `split.train` (bằng train + validation) và đo
+  trên test. Không bao giờ chọn trên test.
+- **Phá hòa timestamp ngẫu nhiên theo seed.** 94/610 user có nhiều phim trùng
+  timestamp cuối (nhiều nhất 34 phim cùng một giây). Trước đây phim test luôn là
+  phim có `item_id` lớn nhất, tức lệch về phim mới thêm vào MovieLens. Đổi cách
+  này làm đổi phim test của 59 user.
+- **Bài toán là dự đoán tương tác, không phải dự đoán sở thích.** 16,2% phim
+  test bị user chấm dưới 3 sao (12,6% từ 2 sao trở xuống). Nhóm giữ nguyên dữ
+  liệu, khớp với các bài báo top-K trên MovieLens. Báo cáo không được viết "đoán
+  đúng phim user thích".
 
 Hạn chế còn lại, phải nêu trong báo cáo:
 - Train vẫn chứa tương tác về sau của user **khác** (ví dụ số đếm của
   Popularity). Giao thức chỉ chặn tương lai *của chính user đó*.
-- 94/610 user có nhiều phim trùng timestamp cuối (nhiều nhất 34 phim cùng một
-  giây); khi đó phim test do phá hòa theo `item_id` quyết định.
-- 23/610 phim test chưa từng xuất hiện trong train — không mô hình lọc cộng
+- 23/610 phim test chưa từng xuất hiện trong train, nên không mô hình lọc cộng
   tác nào đoán được.
 
 `seed` mặc định 42 và **bắt buộc giữ nguyên giữa ba thành viên**. Ba người
@@ -118,63 +141,60 @@ python scripts/exp_knn.py
 
 Mỗi thí nghiệm ghi một file CSV trong `reports/`.
 
-### 1. Theo nhóm user — ItemKNN thắng ở cả ba nhóm
+### 1. Theo nhóm user: ItemKNN thắng ở cả ba nhóm
 
 nDCG@10. Nhóm chia theo **phân vị** số tương tác trong train, mỗi nhóm ~200 user:
 
 | nhóm (số tương tác) | số user | Popularity | ItemKNN | UserKNN | ItemKNN − UserKNN, CI 95% |
 |---|---|---|---|---|---|
-| 19–44 | 209 | 0.4241 | **0.5563** | 0.5071 | +0.049 [+0.007, +0.090] |
-| 45–126 | 198 | 0.3955 | **0.5287** | 0.4722 | +0.056 [+0.020, +0.094] |
-| 127–2697 | 203 | 0.2603 | **0.3371** | 0.2908 | +0.046 [+0.019, +0.076] |
+| 19-44 | 209 | 0.4181 | **0.5612** | 0.5043 | +0.057 [+0.016, +0.096] |
+| 45-126 | 198 | 0.3989 | **0.5321** | 0.4695 | +0.063 [+0.028, +0.098] |
+| 127-2697 | 203 | 0.2591 | **0.3337** | 0.2892 | +0.045 [+0.015, +0.076] |
 
-- **ItemKNN thắng UserKNN ở cả ba nhóm, chênh lệch có ý nghĩa.** Popularity
-  thấp nhất ở mọi nhóm.
-- **Bản trước kết luận ngược lại** — "nhóm 5–20 thì UserKNN tốt hơn, Popularity
-  thắng recall" — từ một nhóm thực chất là 29 user có 19–20 tương tác, chênh
-  lệch nằm trong nhiễu (CI [−0.090, +0.159]). Kết luận đó **không** còn là căn
-  cứ cho B7.
-- **Mọi mô hình đều kém nhất ở nhóm nhiều lịch sử nhất.** Độ khó của user nhiều
-  lịch sử là tính chất của dữ liệu, không phải điểm yếu riêng của Popularity.
-- ⚠️ **Đây không phải phân tích cold-start**: nhóm thưa nhất vẫn có ≥ 19 tương
-  tác. Muốn đo cold-start phải cắt bớt lịch sử train (checklist 2.8).
+- ItemKNN thắng UserKNN ở cả ba nhóm, chênh lệch có ý nghĩa. Popularity thấp
+  nhất ở mọi nhóm.
+- Mọi mô hình đều kém nhất ở nhóm nhiều lịch sử nhất. Độ khó của user nhiều
+  lịch sử là tính chất của dữ liệu, không riêng gì Popularity.
+- **Đây không phải phân tích cold-start**: nhóm thưa nhất vẫn có ≥ 19 tương tác.
+  Cold-start thật nằm ở [phần đo thêm](#đo-thêm-toàn-danh-mục-auc-cold-start).
 
 ### 2. Hai chế độ chấm điểm
 
 | | recall@10 | ndcg@10 | MRR | coverage@10 |
 |---|---|---|---|---|
-| ItemKNN `sum` | 0.6754 | **0.4744** | 0.4203 | 0.0768 |
-| ItemKNN `weighted` | 0.6361 | 0.3354 | 0.2537 | **0.2430** |
-| UserKNN `sum` | 0.6508 | **0.4238** | 0.3662 | 0.0288 |
-| UserKNN `weighted` | 0.4672 | 0.2111 | 0.1583 | **0.1159** |
+| ItemKNN `sum` | 0.6803 | **0.4761** | 0.4225 | 0.0749 |
+| ItemKNN `weighted` | 0.5787 | 0.2651 | 0.1872 | **0.2859** |
+| UserKNN `sum` | 0.6443 | **0.4214** | 0.3647 | 0.0288 |
+| UserKNN `weighted` | 0.4525 | 0.2089 | 0.1604 | **0.1138** |
 
-`weighted` là công thức **dự đoán rating** ở slide L2 tr.17/22. Nó tụt 29–50%
-nDCG nhưng phủ danh mục gấp **3–4 lần**. Lý do: phép chia cho `Σ sim` xoá mất
-tín hiệu *"có bao nhiêu bằng chứng"*, nên một phim ít người biết mà có đúng
-một láng giềng rất giống được xếp ngang phim nổi tiếng có ba mươi láng giềng.
+`weighted` là công thức **dự đoán rating** ở slide L2 tr.17/22. Nó tụt 44-50%
+nDCG nhưng phủ danh mục gấp 3,8-4 lần. Lý do: phép chia cho `Σ sim` xoá mất tín
+hiệu *"có bao nhiêu bằng chứng"*, nên một phim ít người biết mà có đúng một láng
+giềng rất giống được xếp ngang phim nổi tiếng có ba mươi láng giềng.
 
-Đây không phải lỗi — **hai công thức trả lời hai câu hỏi khác nhau**:
-`weighted` cho MAE/RMSE, `sum` cho top-K.
+Hai công thức trả lời hai câu hỏi khác nhau: `weighted` cho MAE/RMSE, `sum` cho
+top-K.
 
-### 3. Quét số láng giềng k
+### 3. Chọn số láng giềng k trên validation
 
-| k | ItemKNN nDCG@10 | UserKNN nDCG@10 | ItemKNN coverage@10 |
-|---|---|---|---|
-| 5 | 0.3633 | 0.2944 | 0.0958 |
-| 20 | 0.4654 | 0.4036 | 0.0800 |
-| 40 | 0.4744 | 0.4238 | 0.0768 |
-| 80 | 0.4752 | 0.4269 | 0.0751 |
-| 160 | 0.4738 | 0.4218 | 0.0735 |
+| k | ItemKNN val | UserKNN val | ItemKNN test | UserKNN test | ItemKNN coverage@10 |
+|---|---|---|---|---|---|
+| 5 | 0.3710 | 0.2977 | 0.3699 | 0.2950 | 0.0951 |
+| 10 | 0.4081 | 0.3692 | 0.4291 | 0.3538 | 0.0880 |
+| 20 | 0.4467 | 0.4225 | 0.4564 | 0.3999 | 0.0801 |
+| 40 | 0.4648 | **0.4441** | 0.4688 | 0.4214 | 0.0773 |
+| 80 | **0.4768** | 0.4334 | 0.4761 | 0.4272 | 0.0749 |
+| 160 | 0.4751 | 0.4182 | 0.4761 | 0.4221 | 0.0735 |
 
-Đường cong **phẳng từ k = 40 trở đi** — k=80 hơn k=40 đúng +0.0008 nDCG, CI
-[−0.012, +0.014], tức là nhiễu.
+nDCG@10. Validation chọn k = 80 cho ItemKNN, k = 40 cho UserKNN. Hai số này nằm ở
+`K_ITEM`, `K_USER` trong [recsys/models/knn.py](recsys/models/knn.py), và mọi script
+lấy k từ đó. Chạy lại mà validation chọn khác thì `exp_knn.py` in cảnh báo.
 
-⚠️ k đang được chọn ngay trên **tập kiểm tra** vì chưa có tập validation
-(checklist 2.1). Đọc bảng này như một đường cong, không phải một lựa chọn.
-Khớp với slide L2 tr.22 (thực nghiệm trên MovieLens gợi ý 20–50), và đây là
-lần kiểm lại con số đó bằng chính dữ liệu của nhóm.
+Đường cong phẳng từ k = 40 trở đi: trên test, k = 80 hơn k = 40 +0.007 nDCG, CI
+[−0.006, +0.021], tức là nhiễu. Khớp với slide L2 tr.22 (thực nghiệm trên
+MovieLens gợi ý 20-50).
 
-⚠️ Coverage **giảm đều** khi k tăng: nhiều láng giềng ⇒ nhiều đồng thuận ⇒
+Coverage **giảm đều** khi k tăng: nhiều láng giềng thì nhiều đồng thuận, tức
 phim phổ biến. Cùng một đánh đổi, lần thứ ba xuất hiện.
 
 ## Đo thêm: toàn danh mục, AUC, cold-start
@@ -187,26 +207,27 @@ Checklist 2.4, 2.5, 2.8. Không đổi giao thức chung, chỉ đo thêm. Số 
 và kết luận: [docs/so-lieu-dot-2.md](docs/so-lieu-dot-2.md).
 
 **Toàn danh mục (2.4).** Xếp phim đúng giữa ~9.700 phim user chưa xem, thay vì 99
-phim lấy mẫu đều. Thứ tự trung bình giữ nguyên (ItemKNN > UserKNN > Popularity),
-nhưng cả ba chênh lệch nDCG@10 thành nhiễu. Ví dụ ItemKNN − Popularity: +0.007, CI
-[−0.003, +0.017]. Chỉ 25-35/610 user trúng top-10, quá ít để tách mô hình. Báo cáo
-phải ghi giao thức cạnh câu "+32%", và bảng cuối kỳ nên chạy thêm trên ml-1m.
+phim lấy mẫu đều. Chỉ 24-38/610 user trúng top-10, nên CI rộng. ItemKNN hơn
+Popularity +0.014 nDCG@10, CI [+0.003, +0.026]: có ý nghĩa nhưng cận dưới sát 0.
+UserKNN − Popularity và ItemKNN − UserKNN về nDCG@10 là nhiễu. Báo cáo phải ghi
+giao thức cạnh câu "+33%", và bảng cuối kỳ nên chạy thêm trên ml-1m (6.040 user).
 
 **Cold-start (2.8).** Cắt lịch sử train của từng 1/4 số user xuống n tương tác gần
 nhất, đo nDCG@10 trên đủ 610 user:
 
 | lịch sử | Popularity | ItemKNN | UserKNN |
 |---|---|---|---|
-| 1 | **0.361** | 0.156 | 0.044 |
-| 3 | **0.360** | 0.253 | **0.352** |
-| 5 | 0.360 | 0.305 | **0.401** |
-| 10 | 0.362 | 0.371 | **0.411** |
-| đầy đủ | 0.360 | **0.474** | 0.424 |
+| 1 | **0.361** | 0.208 | 0.044 |
+| 3 | **0.361** | 0.305 | **0.359** |
+| 5 | 0.360 | 0.352 | **0.405** |
+| 10 | 0.361 | **0.400** | **0.413** |
+| đầy đủ | 0.359 | **0.476** | 0.421 |
 
-Thứ hạng ItemKNN và UserKNN đảo chiều theo độ dài lịch sử. UserKNN hơn ItemKNN
-có ý nghĩa ở 3, 5 và 10 tương tác, còn ở lịch sử đầy đủ thì ItemKNN hơn. Với 1 tương
-tác, UserKNN không có láng giềng nào (Pearson của một rating là không xác định).
-Đây là căn cứ đo được cho lai ghép kiểu chuyển ở B7.
+Ô in đậm là tốt nhất hoặc hòa với tốt nhất (CI ghép cặp chứa 0). UserKNN hơn
+ItemKNN có ý nghĩa ở 3 và 5 tương tác, hòa ở 10, thua ở lịch sử đầy đủ. Với 1
+tương tác, UserKNN không có láng giềng nào (Pearson của một rating là không xác
+định), và Popularity thắng cả hai. Đây là căn cứ đo được cho lai ghép kiểu chuyển
+ở B7.
 
 ## Metadata TMDB
 
@@ -244,19 +265,19 @@ recsys/
   base.py              hợp đồng chung — đọc file này trước
   data/movielens.py    tải + nạp dữ liệu, nối sang TMDB qua links.csv
   data/tmdb.py         metadata TMDB có cache; chuỗi đặc trưng cho B5
-  data/split.py        leave-one-out theo thời gian + lấy mẫu item âm
+  data/split.py        leave-one-out theo thời gian, validation, cắt lịch sử
   eval/metrics.py      P@K, R@K, MAP, MRR, nDCG, AUC, coverage
   eval/runner.py       evaluate() một mô hình, compare() nhiều mô hình
   eval/stats.py        khoảng tin cậy bootstrap theo user
   eval/provenance.py   ghi CSV kèm .meta.json: seed, git commit, phiên bản thư viện
   models/baselines.py  B0 — Popularity, Random
-  models/knn.py        B1 — Item-KNN · B2 — User-KNN (Pearson)
+  models/knn.py        B1 — Item-KNN · B2 — User-KNN (Pearson), k đã chọn
 scripts/run_eval.py    CLI chạy so sánh
 scripts/fetch_tmdb.py  tải metadata TMDB về cache
-scripts/exp_knn.py     ba thí nghiệm của bậc B1/B2
+scripts/exp_knn.py     ba thí nghiệm của bậc B1/B2, chọn k trên validation
 scripts/exp_giao_thuc.py  toàn danh mục, tách AUC, cold-start (checklist 2.4/2.5/2.8)
 scripts/so_lieu_slide.py  mọi số cho slide, kèm CI 95% (in Markdown)
-tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN (151 test)
+tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN (165 test)
 docs/checklist.md      việc cần sửa, chia đợt, có người phụ trách
 docs/so-lieu-slide.md  số liệu và câu cần sửa cho từng slide
 docs/so-lieu-dot-2.md  số liệu và kết luận của 2.4, 2.5, 2.8

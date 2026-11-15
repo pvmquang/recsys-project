@@ -162,7 +162,10 @@ class TestLapLaiDuoc:
 
     def test_item_kiem_tra_KHONG_doi_theo_seed(self):
         """Item kiem tra do THOI GIAN quyet dinh, khong do ngau nhien.
-        Doi theo seed nghia la phep chia dang lay ngau nhien o dau do."""
+        Doi theo seed nghia la phep chia dang lay ngau nhien o dau do.
+
+        Ngoai le duy nhat: nhieu phim TRUNG timestamp cuoi thi seed pha hoa
+        (checklist 2.3, xem tests/test_giao_thuc.py). Du lieu o day khong trung."""
         r = make_ratings()
         a = leave_one_out(r, n_negatives=5, min_interactions=3, seed=1)
         b = leave_one_out(r, n_negatives=5, min_interactions=3, seed=2)
