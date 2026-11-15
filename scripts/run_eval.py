@@ -18,6 +18,7 @@ from recsys.eval.provenance import save_result
 from recsys.eval.runner import compare, format_table
 from recsys.models.baselines import Popularity, RandomRec
 from recsys.models.knn import K_ITEM, K_USER, ItemKNN, UserKNN
+from recsys.models.mf import MF
 
 # Dang ky mo hinh o day. Tuan 3 tro di, moi bac moi them mot dong.
 MODELS = [
@@ -25,6 +26,7 @@ MODELS = [
     Popularity(),
     ItemKNN(k=K_ITEM),  # k chon tren validation, xem knn.K_ITEM
     UserKNN(k=K_USER),
+    MF(),  # implicit ALS, sieu tham so chon tren validation, xem mf.FACTORS...
 ]
 
 
