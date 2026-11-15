@@ -30,6 +30,7 @@ def evaluate(
     ks: Sequence[int] = DEFAULT_KS,
     by_activity: bool = False,
     keep_per_user: bool = False,
+    full_catalog: bool = False,
 ) -> dict:
     """Danh gia mot mo hinh DA duoc fit.
 
@@ -39,14 +40,28 @@ def evaluate(
 
     keep_per_user: them khoa "per_user" (DataFrame, chi so user_id) -- can cho
         khoang tin cay, xem recsys/eval/stats.py.
+    full_catalog: xep hang item dung giua MOI item user chua xem (~9.700 item),
+        thay vi 99 item am lay mau. Xem Split.full_candidates (checklist 2.4).
+
+    Hai cot ve diem -inf (checklist 2.5):
+        auc     tinh tu DIEM, cap bang diem tinh 0.5 (metrics.auc_from_scores)
+        vo_cuc  ti le ung vien co diem -inf -- mo hinh "khong co y kien". Cao thi
+                cac do do xep hang chu yeu do thu tu xao ngau nhien, khong do mo hinh.
     """
     per_user: list[dict] = []
     all_recommended: list[list[int]] = []
     t0 = time.perf_counter()
 
     for user_id in split.users:
-        candidates = split.candidates(user_id)
-        scores = model.score(user_id, candidates)
+        if full_catalog:
+            candidates = split.full_candidates(user_id)
+        else:
+            candidates = split.candidates(user_id)
+        scores = np.asarray(model.score(user_id, candidates), dtype=float)
+        target = int(split.test[user_id])
+        is_pos = candidates == target
+        auc = m.auc_from_scores(scores[is_pos], scores[~is_pos])
+        vo_cuc = float(np.isneginf(scores).mean())
 
         # Xao truoc khi xep hang. Khong xao thi moi cap diem BANG NHAU se
         # duoc gioi quyet theo thu tu mang -- ma item dung luon o vi tri 0
@@ -56,9 +71,9 @@ def evaluate(
         candidates, scores = candidates[order], scores[order]
 
         ranked = candidates[np.argsort(-scores, kind="stable")].tolist()
-        relevant = {int(split.test[user_id])}
+        relevant = {target}
 
-        row: dict = {"user_id": user_id, "auc": m.auc(ranked, relevant)}
+        row: dict = {"user_id": user_id, "auc": auc, "vo_cuc": vo_cuc}
         for k in ks:
             row[f"precision@{k}"] = m.precision_at_k(ranked, relevant, k)
             row[f"recall@{k}"] = m.recall_at_k(ranked, relevant, k)
@@ -134,6 +149,7 @@ def compare(
     models: Sequence[Recommender],
     split: Split,
     ks: Sequence[int] = DEFAULT_KS,
+    full_catalog: bool = False,
 ) -> pd.DataFrame:
     """Fit va danh gia nhieu mo hinh, tra ve bang so sanh.
 
@@ -145,7 +161,7 @@ def compare(
     for model in models:
         print(f"  {model.name:<28}", end="", flush=True)
         model.fit(split.train)
-        res = evaluate(model, split, ks)
+        res = evaluate(model, split, ks, full_catalog=full_catalog)
         res.pop("theo_nhom", None)
         rows.append(res)
         print(f" ndcg@10={res['ndcg@10']:.4f}  ({res['seconds']}s)")
@@ -158,6 +174,6 @@ def format_table(df: pd.DataFrame, ks: Sequence[int] = DEFAULT_KS) -> str:
     cols = ["n_users"]
     for k in ks:
         cols += [f"recall@{k}", f"ndcg@{k}"]
-    cols += ["mrr", "auc", f"coverage@{MAIN_K}"]
+    cols += ["mrr", "auc", "vo_cuc", f"coverage@{MAIN_K}"]
     cols = [c for c in cols if c in df.columns]
     return df[cols].round(4).to_string()
