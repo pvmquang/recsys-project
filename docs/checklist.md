@@ -101,37 +101,44 @@ Số liệu mới và gợi ý câu chữ cho từng slide: [so-lieu-slide.md](s
 Đổi giao thức chung, nên **mọi số B0–B2 sẽ thay đổi**. Thống nhất xong thì làm
 một lần, rồi chạy lại toàn bộ.
 
-- [ ] 🗳️ **2.1 Tách tập validation** · @... · *FB#6*
+- [x] 🗳️ **2.1 Tách tập validation** · @... · *FB#6*
   - `exp_knn.py` đang chọn k ngay trên test. Từ B3 có nhiều siêu tham số hơn.
   - Đề xuất: validation = tương tác áp chót mỗi user. Chọn siêu tham số trên
     validation, rồi huấn luyện lại trên train + validation và đo trên test.
+  - Nhóm chốt: theo đề xuất. Kết quả: `split.validation()`. Validation chọn ItemKNN k = 80,
+    UserKNN k = 40, ghi ở `knn.K_ITEM`, `knn.K_USER`. Mọi script lấy k từ đó.
 
-- [ ] 🗳️ **2.2 Item test có rating thấp** · @... · *RV*
+- [x] 🗳️ **2.2 Item test có rating thấp** · @... · *RV*
   - 15.4% item test được chấm < 3 sao (11.8% ≤ 2). Mô hình đang được thưởng khi
     gợi ý trúng phim user không thích.
   - Chọn một: chỉ lấy item test ≥ 3.5 sao, hoặc giữ nguyên và ghi rõ bài toán là
     "dự đoán tương tác", không phải "dự đoán sở thích".
+  - Nhóm chốt: giữ nguyên, gọi đúng tên bài toán là "dự đoán tương tác". Ghi ở docstring
+    `split.py`, README và mục hạn chế của `so_lieu_slide.py`. Sau khi phá hòa (2.3): 16,2%
+    item test dưới 3 sao, 12,6% từ 2 sao trở xuống.
 
-- [ ] 🗳️ **2.3 Phá hòa timestamp** · @... · *FB#3b + RV*
+- [x] 🗳️ **2.3 Phá hòa timestamp** · @... · *FB#3b + RV*
   - 94/610 user (15%) có nhiều phim trùng timestamp cuối, nhiều nhất 34 phim cùng
     một giây. Item test khi đó do `item_id` lớn nhất quyết định — thiên về phim mới.
   - Phá hòa ngẫu nhiên theo seed, hoặc ghi rõ thành hạn chế.
+  - Nhóm chốt: phá hòa ngẫu nhiên. Kết quả: `split.sort_with_random_ties`, luồng ngẫu nhiên
+    riêng nên item âm không đổi. Phim test đổi ở 59/94 user bị trùng.
 
 - [x] **2.4 Đánh giá thêm trên toàn danh mục** · @... · *FB#5 + RV*
   - Trung vị độ phổ biến: item đúng 39 lượt, item âm 3 lượt → lấy mẫu đều có lợi cho
     Popularity. Xem Krichene & Rendle, KDD 2020.
   - 610 user × 9.724 phim vẫn chạy nhanh. Bảng cuối kỳ có thêm một bảng này.
-  - Kết quả: `evaluate(..., full_catalog=True)`, `run_eval.py --full-catalog`. Mọi chênh
-    nDCG@10 giữa Popularity/ItemKNN/UserKNN thành nhiễu (25-35/610 user trúng top-10).
-    Xem [so-lieu-dot-2.md](so-lieu-dot-2.md).
+  - Kết quả: `evaluate(..., full_catalog=True)`, `run_eval.py --full-catalog`. Chênh nDCG@10
+    co lại khoảng 8 lần; chỉ ItemKNN − Popularity còn có ý nghĩa (+0.014, cận dưới +0.003).
+    24-38/610 user trúng top-10. Xem [so-lieu-dot-2.md](so-lieu-dot-2.md).
 
 - [x] **2.5 AUC xử lý thế hòa + báo tỉ lệ ứng viên `-inf`** · @... · *RV*
   - Ứng viên điểm `-inf`: ItemKNN 87.9%, UserKNN 71.9%, Popularity 0.3%.
     AUC của KNN chủ yếu đo "item đúng có láng giềng không".
   - Tính AUC từ điểm, cặp bằng nhau tính 0.5.
-  - Kết quả: `metrics.auc_from_scores`, cột `vo_cuc` trong runner. AUC chỉ đổi ở chữ số
-    thứ ba, ItemKNN − UserKNN vẫn có ý nghĩa. Nguyên nhân: ItemKNN không chấm được 29% phim
-    đúng (UserKNN 17,5%). Khi chấm được, ItemKNN xếp tốt hơn (AUC 0.974 so với 0.936).
+  - Kết quả: `metrics.auc_from_scores`, cột `vo_cuc` trong runner. Sau 2.1-2.3, cả ba cặp
+    so sánh AUC là nhiễu. AUC phụ thuộc tỉ lệ phim đúng bị `-inf` (ItemKNN 23%, UserKNN
+    18,7%) nhiều hơn chất lượng xếp hạng.
 
 - [ ] **2.6 Ghi vào báo cáo: 23/610 item test không có trong train** · @... · *RV*
   - Không mô hình lọc cộng tác nào đoán được → recall có trần ~96%.
@@ -143,8 +150,9 @@ một lần, rồi chạy lại toàn bộ.
 - [x] **2.8 Đo cold-start thật** · @... · *FB#1*
   - Cắt lịch sử train của một phần user xuống 1, 3, 5 tương tác rồi đo lại.
     Đây mới là căn cứ cho B7.
-  - Kết quả: `split.truncate_history`, `scripts/exp_giao_thuc.py`. UserKNN hơn ItemKNN có
-    ý nghĩa ở 3/5/10 tương tác, đảo chiều ở lịch sử đầy đủ; Popularity tốt nhất ở 1 tương tác.
+  - Kết quả: `split.truncate_history`, `scripts/exp_giao_thuc.py`. Popularity tốt nhất ở 1
+    tương tác; UserKNN hơn ItemKNN có ý nghĩa ở 3 và 5, hòa ở 10; ItemKNN tốt nhất ở lịch
+    sử đầy đủ.
 
 ---
 
