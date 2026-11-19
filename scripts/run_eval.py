@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import argparse
 
-from recsys.data import movielens
+from recsys.data import movielens, tmdb
 from recsys.data.split import leave_one_out
 from recsys.eval.provenance import save_result
 from recsys.eval.runner import compare, format_table
 from recsys.models.baselines import Popularity, RandomRec
 from recsys.models.bpr import BPR
+from recsys.models.content import ContentBased
 from recsys.models.knn import K_ITEM, K_USER, ItemKNN, UserKNN
 from recsys.models.mf import MF
 
@@ -52,8 +53,12 @@ def main() -> None:
     split = leave_one_out(ratings, n_negatives=args.negatives, seed=args.seed)
     print(f"  {split.summary()}\n")
 
+    # B5 can metadata cua dung bo du lieu nen tao o day, khong o MODELS.
+    # Sieu tham so chon tren validation, xem content.FIELDS...
+    models = [*MODELS, ContentBased(tmdb.load_metadata(args.dataset))]
+
     print("Danh gia" + (" (toan danh muc):" if args.full_catalog else ":"))
-    df = compare(MODELS, split, full_catalog=args.full_catalog)
+    df = compare(models, split, full_catalog=args.full_catalog)
 
     print("\n" + "=" * 78)
     print(format_table(df))
@@ -63,7 +68,7 @@ def main() -> None:
         out = save_result(
             df, args.out, seed=args.seed, dataset=args.dataset,
             negatives=args.negatives, full_catalog=args.full_catalog,
-            models=[m.name for m in MODELS],
+            models=[m.name for m in models],
         )
         print(f"\nDa ghi: {out}")
 
