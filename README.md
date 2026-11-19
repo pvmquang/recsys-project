@@ -12,7 +12,7 @@ python -m venv .venv
 pip install -r requirements-lock.txt   # đúng phiên bản đã ghim, ba máy như nhau
 pip install -e . --no-deps             # cài gói recsys, script import được từ mọi nơi
 
-pytest -q                       # 181 test, không gọi mạng
+pytest -q                       # 192 test, không gọi mạng
 python scripts/run_eval.py      # tự tải MovieLens ở lần chạy đầu
 ```
 
@@ -36,17 +36,22 @@ python scripts/so_lieu_slide.py   # mọi số dưới đây, kèm CI 95%
 | B0-Popularity | 0.5967 | 0.3590 | 0.3019 | 0.8315 | 0.0126 |
 | B1-ItemKNN (k=80) | 0.6803 | 0.4761 | 0.4225 | 0.8342 | 0.0749 |
 | B2-UserKNN (k=40) | 0.6443 | 0.4214 | 0.3647 | 0.8310 | 0.0288 |
-| **B3-MF** implicit (f=32) | **0.7279** | **0.5003** | **0.4386** | 0.8605 | 0.1006 |
+| B3-MF implicit (f=32) | 0.7279 | **0.5003** | **0.4386** | 0.8605 | 0.1006 |
+| B4-BPR (f=64) | **0.7328** | 0.4886 | 0.4239 | **0.8858** | 0.0911 |
 
-Số láng giềng k và siêu tham số của MF chọn trên tập validation (xem
-[Giao thức](#giao-thức-đánh-giá)). Dòng B3 lấy từ `scripts/exp_mf.py`, xem
-[phần B3](#bậc-b3-phân-rã-ma-trận).
+Số in đậm là cao nhất cột (trừ coverage), không có nghĩa là thắng: B3 và B4 hòa về
+recall@10 và nDCG@10 (CI ghép cặp chứa 0). B4 hơn B3 về AUC có ý nghĩa.
+
+Số láng giềng k và siêu tham số của MF, BPR chọn trên tập validation (xem
+[Giao thức](#giao-thức-đánh-giá)). Dòng B3, B4 lấy từ `scripts/exp_mf.py` và
+`scripts/exp_bpr.py`, xem [phần B3](#bậc-b3-phân-rã-ma-trận) và
+[phần B4](#bậc-b4-bpr-mf).
 AUC tính từ điểm, cặp bằng điểm tính 0.5. Coverage là coverage@10, cùng k với
 các cột bên cạnh.
 
 **Cả bảng này đo trên 1 phim đúng + 99 phim âm lấy mẫu.** Trên toàn danh mục,
-chỉ còn ItemKNN và MF hơn Popularity có ý nghĩa, và đều sát ngưỡng. MF với ItemKNN
-thì hòa. Xem
+chỉ còn ItemKNN, MF và BPR hơn Popularity có ý nghĩa, và đều sát ngưỡng. Ba mô hình
+này hòa nhau. Xem
 [phần đo thêm ở dưới](#đo-thêm-toàn-danh-mục-auc-cold-start).
 
 **Kiểm tra bằng Random không phát hiện lỗi khung đo.** Qua 10 seed: recall@10
@@ -231,7 +236,7 @@ nhất, đo nDCG@10 trên đủ 610 user:
 ItemKNN có ý nghĩa ở 3 và 5 tương tác, hòa ở 10, thua ở lịch sử đầy đủ. Với 1
 tương tác, UserKNN không có láng giềng nào (Pearson của một rating là không xác
 định), và Popularity thắng cả hai. Đây là căn cứ đo được cho lai ghép kiểu chuyển
-ở B7. MF ở B3 làm căn cứ này yếu đi, xem phần dưới.
+ở B7. MF ở B3 và BPR ở B4 làm căn cứ này không còn đứng được, xem phần dưới.
 
 ## Bậc B3: phân rã ma trận
 
@@ -256,6 +261,28 @@ Cài trong [recsys/models/mf.py](recsys/models/mf.py) bằng numpy, huấn luy�
 - **Câu giải thích là phân rã chính xác.** Điểm của phim gợi ý bằng đúng tổng đóng góp
   của các phim user đã xem (`MF.contributions()`). `explain()` nêu ba phim đóng góp
   nhiều nhất.
+
+## Bậc B4: BPR-MF
+
+```bash
+python scripts/exp_bpr.py   # ~20-30 phút, ghi reports/exp_bpr_*.csv
+```
+
+Cài trong [recsys/models/bpr.py](recsys/models/bpr.py) bằng numpy, học bằng SGD theo lô.
+Cùng dạng điểm với MF, nhưng chỉ học thứ tự: phim đã xem phải xếp trên phim chưa xem. Số
+đầy đủ kèm CI và kết luận: [docs/so-lieu-b4.md](docs/so-lieu-b4.md).
+
+- **Siêu tham số chọn trên validation:** f = 64, lr = 0.1, reg = 0.01, 80 epoch.
+- **BPR và MF implicit hòa về nDCG@10 và recall@10**, ở cả hai giao thức.
+- **BPR hơn MF về AUC:** +0.025, CI [+0.014, +0.037]. Khớp lý thuyết, vì mục tiêu của
+  BPR là dạng liên tục của AUC.
+- **Bias của BPR gần như là độ phổ biến** (Spearman 0.949 với số lượt xem). Dù vậy top-10
+  của BPR không thiên về phim phổ biến hơn MF.
+- **Cold-start:** với 1 tương tác, BPR hơn cả MF (+0.047) và Popularity (+0.076), đều có
+  ý nghĩa. Từ 3 tương tác trở lên BPR hòa MF. Như vậy chưa có mức lịch sử nào mà chuyển
+  sang Popularity giúp được. B7 cần căn cứ khác, ví dụ phim mới chưa ai xem.
+- **Câu giải thích là hậu kiểm**, nêu phim đã xem có vector gần phim gợi ý nhất. Không
+  phân rã điểm chính xác được như B3.
 
 ## Metadata TMDB
 
@@ -301,17 +328,20 @@ recsys/
   models/baselines.py  B0 — Popularity, Random
   models/knn.py        B1 — Item-KNN · B2 — User-KNN (Pearson), k đã chọn
   models/mf.py         B3 — phân rã ma trận ALS, implicit và explicit
+  models/bpr.py        B4 — BPR-MF, xếp hạng theo cặp, SGD theo lô
 scripts/run_eval.py    CLI chạy so sánh
 scripts/fetch_tmdb.py  tải metadata TMDB về cache
 scripts/exp_knn.py     ba thí nghiệm của bậc B1/B2, chọn k trên validation
 scripts/exp_giao_thuc.py  toàn danh mục, tách AUC, cold-start (checklist 2.4/2.5/2.8)
 scripts/exp_mf.py      thí nghiệm B3: chọn siêu tham số, bảng test, cold-start
+scripts/exp_bpr.py     thí nghiệm B4: như B3, thêm thiên lệch phổ biến
 scripts/so_lieu_slide.py  mọi số cho slide, kèm CI 95% (in Markdown)
-tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF (181 test)
+tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR (192 test)
 docs/checklist.md      việc cần sửa, chia đợt, có người phụ trách
 docs/so-lieu-slide.md  số liệu và câu cần sửa cho từng slide
 docs/so-lieu-dot-2.md  số liệu và kết luận của 2.4, 2.5, 2.8
 docs/so-lieu-b3.md     số liệu và kết luận của B3
+docs/so-lieu-b4.md     số liệu và kết luận của B4
 ```
 
 ## Mã nguồn và dữ liệu tái sử dụng
