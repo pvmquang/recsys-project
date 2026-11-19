@@ -17,6 +17,7 @@ from recsys.data.split import leave_one_out
 from recsys.eval.provenance import save_result
 from recsys.eval.runner import compare, format_table
 from recsys.models.baselines import Popularity, RandomRec
+from recsys.models.bpr import BPR
 from recsys.models.knn import K_ITEM, K_USER, ItemKNN, UserKNN
 from recsys.models.mf import MF
 
@@ -27,6 +28,7 @@ MODELS = [
     ItemKNN(k=K_ITEM),  # k chon tren validation, xem knn.K_ITEM
     UserKNN(k=K_USER),
     MF(),  # implicit ALS, sieu tham so chon tren validation, xem mf.FACTORS...
+    BPR(),  # sieu tham so chon tren validation, xem bpr.FACTORS...
 ]
 
 
