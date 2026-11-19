@@ -267,7 +267,13 @@ def load_metadata(dataset: str = "ml-latest-small") -> pd.DataFrame:
     if cache.empty:
         return _empty_metadata(movies)
 
-    links = movielens.load_links(dataset).dropna(subset=["tmdb_id"])
+    try:
+        links = movielens.load_links(dataset)
+    except FileNotFoundError:
+        # ml-1m khong co links.csv: khong noi sang TMDB duoc, nhung B5 van chay
+        # bang the loai. Nem loi o day thi run_eval.py --dataset ml-1m chet vi B5.
+        return _empty_metadata(movies)
+    links = links.dropna(subset=["tmdb_id"])
     links["tmdb_id"] = links["tmdb_id"].astype(int)
 
     df = movies.merge(links[["item_id", "tmdb_id"]], on="item_id", how="left")
