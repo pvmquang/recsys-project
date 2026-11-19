@@ -12,7 +12,7 @@ python -m venv .venv
 pip install -r requirements-lock.txt   # đúng phiên bản đã ghim, ba máy như nhau
 pip install -e . --no-deps             # cài gói recsys, script import được từ mọi nơi
 
-pytest -q                       # 192 test, không gọi mạng
+pytest -q                       # 208 test, không gọi mạng
 python scripts/run_eval.py      # tự tải MovieLens ở lần chạy đầu
 ```
 
@@ -38,14 +38,15 @@ python scripts/so_lieu_slide.py   # mọi số dưới đây, kèm CI 95%
 | B2-UserKNN (k=40) | 0.6443 | 0.4214 | 0.3647 | 0.8310 | 0.0288 |
 | B3-MF implicit (f=32) | 0.7279 | **0.5003** | **0.4386** | 0.8605 | 0.1006 |
 | B4-BPR (f=64) | **0.7328** | 0.4886 | 0.4239 | **0.8858** | 0.0911 |
+| B5-Content (TMDB) | 0.4869 | 0.2563 | 0.2067 | 0.8052 | 0.2788 |
 
 Số in đậm là cao nhất cột (trừ coverage), không có nghĩa là thắng: B3 và B4 hòa về
 recall@10 và nDCG@10 (CI ghép cặp chứa 0). B4 hơn B3 về AUC có ý nghĩa.
 
-Số láng giềng k và siêu tham số của MF, BPR chọn trên tập validation (xem
-[Giao thức](#giao-thức-đánh-giá)). Dòng B3, B4 lấy từ `scripts/exp_mf.py` và
-`scripts/exp_bpr.py`, xem [phần B3](#bậc-b3-phân-rã-ma-trận) và
-[phần B4](#bậc-b4-bpr-mf).
+Số láng giềng k và siêu tham số của MF, BPR, B5 chọn trên tập validation (xem
+[Giao thức](#giao-thức-đánh-giá)). Dòng B3, B4, B5 lấy từ `scripts/exp_mf.py`,
+`scripts/exp_bpr.py` và `scripts/exp_content.py`, xem [phần B3](#bậc-b3-phân-rã-ma-trận),
+[phần B4](#bậc-b4-bpr-mf) và [phần B5](#bậc-b5-gợi-ý-theo-nội-dung).
 AUC tính từ điểm, cặp bằng điểm tính 0.5. Coverage là coverage@10, cùng k với
 các cột bên cạnh.
 
@@ -280,9 +281,37 @@ Cùng dạng điểm với MF, nhưng chỉ học thứ tự: phim đã xem ph�
   của BPR không thiên về phim phổ biến hơn MF.
 - **Cold-start:** với 1 tương tác, BPR hơn cả MF (+0.047) và Popularity (+0.076), đều có
   ý nghĩa. Từ 3 tương tác trở lên BPR hòa MF. Như vậy chưa có mức lịch sử nào mà chuyển
-  sang Popularity giúp được. B7 cần căn cứ khác, ví dụ phim mới chưa ai xem.
+  sang Popularity giúp được. B7 cần căn cứ khác: phim mới chưa ai xem, xem B5.
 - **Câu giải thích là hậu kiểm**, nêu phim đã xem có vector gần phim gợi ý nhất. Không
   phân rã điểm chính xác được như B3.
+
+## Bậc B5: gợi ý theo nội dung
+
+```bash
+python scripts/fetch_tmdb.py      # cần cache TMDB trước, xem phần dưới
+python scripts/exp_content.py     # ~15-20 phút, ghi reports/exp_content_*.csv
+```
+
+Cài trong [recsys/models/content.py](recsys/models/content.py). Mỗi phim là một vector TF-IDF
+từ metadata, hồ sơ user là tổng các vector phim đã xem, điểm là cosine. Số đầy đủ kèm CI và
+kết luận: [docs/so-lieu-b5.md](docs/so-lieu-b5.md).
+
+- **Siêu tham số chọn trên validation:** thể loại, thập niên, đạo diễn, diễn viên, từ khóa;
+  trọng số `binary`; half_life 3 (ưu tiên phim xem gần nhất); trọng số thể loại 1, đạo diễn 4.
+  Thêm tóm tắt phim hay trọng số theo rating đều làm kết quả kém đi.
+- **Khi lấy mẫu, B5 thua cả Popularity** (nDCG@10 −0.103, có ý nghĩa). Trên toàn danh mục,
+  chênh lệch nDCG@10 với Popularity, ItemKNN, BPR đều là nhiễu. Lý do: B5 không biết độ phổ
+  biến, mà phim âm lấy mẫu phần lớn là phim ít người xem.
+- **B5 phủ 27,9% danh mục**, gấp 3 lần BPR. Phim nó gợi ý có trung vị 7 lượt xem, của BPR là 108.
+- **Phim mới:** khi phim test bị xóa khỏi train, Popularity và BPR về nDCG@10 bằng 0, B5 vẫn
+  được 0.252. Đây là căn cứ cho B7: lai ghép kiểu chuyển theo phim, không theo user.
+- **User mới:** B5 thua Popularity và BPR ở mọi mức lịch sử, nên không dùng cho user mới.
+- **Câu giải thích là phân rã chính xác**, theo từng đặc trưng (`shared_features()`) và từng
+  phim đã xem (`contributions()`).
+- `recommend()` chỉ duyệt phim có trong train, nên B5 chưa đưa phim mới lên giao diện. B7 phải
+  tự mở rộng danh mục ứng viên.
+- Chưa có cache TMDB thì B5 chỉ dùng thể loại và thập niên. nDCG@10 validation khi đó là 0.2035
+  thay vì 0.2571.
 
 ## Metadata TMDB
 
@@ -310,8 +339,8 @@ tách thành `james` + `cameron`. Hậu quả: mọi phim có diễn viên tên 
 John hay Lee đều tương đồng giả với nhau. `tmdb._token()` nối tên lại thành
 một token — `chris_evans` và `chris_pratt` là hai token khác hẳn nhau.
 
-Đây là cải tiến nhỏ, đo được bằng số, giải thích được bằng một câu — nên
-báo cáo nên đo **cả hai cách** rồi trình bày chênh lệch.
+Đã đo ở `scripts/exp_content.py` (mục 3): tách tên như repo gốc làm nDCG@10 của B5
+giảm từ 0.256 xuống 0.200. Chênh lệch +0.057, CI 95% [+0.040, +0.074].
 
 ## Cấu trúc
 
@@ -329,19 +358,22 @@ recsys/
   models/knn.py        B1 — Item-KNN · B2 — User-KNN (Pearson), k đã chọn
   models/mf.py         B3 — phân rã ma trận ALS, implicit và explicit
   models/bpr.py        B4 — BPR-MF, xếp hạng theo cặp, SGD theo lô
+  models/content.py    B5 — nội dung, hồ sơ user TF-IDF từ metadata
 scripts/run_eval.py    CLI chạy so sánh
 scripts/fetch_tmdb.py  tải metadata TMDB về cache
 scripts/exp_knn.py     ba thí nghiệm của bậc B1/B2, chọn k trên validation
 scripts/exp_giao_thuc.py  toàn danh mục, tách AUC, cold-start (checklist 2.4/2.5/2.8)
 scripts/exp_mf.py      thí nghiệm B3: chọn siêu tham số, bảng test, cold-start
 scripts/exp_bpr.py     thí nghiệm B4: như B3, thêm thiên lệch phổ biến
+scripts/exp_content.py thí nghiệm B5: như B4, thêm phim mới, nối tên người
 scripts/so_lieu_slide.py  mọi số cho slide, kèm CI 95% (in Markdown)
-tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR (192 test)
+tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR, B5 (208 test)
 docs/checklist.md      việc cần sửa, chia đợt, có người phụ trách
 docs/so-lieu-slide.md  số liệu và câu cần sửa cho từng slide
 docs/so-lieu-dot-2.md  số liệu và kết luận của 2.4, 2.5, 2.8
 docs/so-lieu-b3.md     số liệu và kết luận của B3
 docs/so-lieu-b4.md     số liệu và kết luận của B4
+docs/so-lieu-b5.md     số liệu và kết luận của B5
 ```
 
 ## Mã nguồn và dữ liệu tái sử dụng

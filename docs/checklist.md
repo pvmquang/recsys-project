@@ -142,6 +142,8 @@ một lần, rồi chạy lại toàn bộ.
 
 - [ ] **2.6 Ghi vào báo cáo: 23/610 item test không có trong train** · @... · *RV*
   - Không mô hình lọc cộng tác nào đoán được → recall có trần ~96%.
+  - Đã đo ở `scripts/exp_content.py` (mục 2): B0, B1, B4 trúng top-10 cho 0/23 user, B5 trúng
+    5/23 khi lấy mẫu, 1/23 trên toàn danh mục. Còn việc viết vào báo cáo.
 
 - [ ] **2.7 Ghi vào báo cáo: rò rỉ giữa các user** · @... · *FB#3b + RV*
   - Leave-one-out theo từng user vẫn để train chứa tương lai của user khác
