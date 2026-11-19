@@ -10,3 +10,4 @@ reports/*.png
 .ipynb_checkpoints/
 reports/*.meta.json
 *.egg-info/
+graphify-out/
