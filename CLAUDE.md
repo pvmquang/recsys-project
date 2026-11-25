@@ -25,13 +25,15 @@ Làm trên nhánh riêng, PR vào `main`. `graphify-out/` là output của công
 
 ```bash
 .venv/Scripts/python -m pytest -q             # toàn bộ test, không gọi mạng, ~2 giây
-.venv/Scripts/python scripts/run_eval.py      # bảng B0-B5, thêm --full-catalog để đo toàn danh mục
+.venv/Scripts/python scripts/run_eval.py      # bảng B0-B7, thêm --full-catalog để đo toàn danh mục
 .venv/Scripts/python scripts/so_lieu_slide.py # số cho slide, kèm CI 95%
 .venv/Scripts/python scripts/exp_knn.py       # ba thí nghiệm B1/B2, ~1 phút
 .venv/Scripts/python scripts/exp_giao_thuc.py # toàn danh mục, tách AUC, cold-start, ~3 phút
 .venv/Scripts/python scripts/exp_mf.py        # B3: chọn siêu tham số trên validation, ~15-20 phút
 .venv/Scripts/python scripts/exp_bpr.py       # B4: như trên, thêm thiên lệch phổ biến, ~20-30 phút
 .venv/Scripts/python scripts/exp_content.py   # B5: cần cache TMDB (fetch_tmdb.py), ~15-20 phút
+.venv/Scripts/python scripts/exp_rules.py     # B6: luật kết hợp theo phiên, ~70 phút
+.venv/Scripts/python scripts/exp_hybrid.py    # B7: cần cache TMDB, ~45 phút
 ```
 
 Cài mới: `pip install -r requirements-lock.txt` rồi `pip install -e . --no-deps`.
