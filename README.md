@@ -12,7 +12,7 @@ python -m venv .venv
 pip install -r requirements-lock.txt   # đúng phiên bản đã ghim, ba máy như nhau
 pip install -e . --no-deps             # cài gói recsys, script import được từ mọi nơi
 
-pytest -q                       # 251 test, không gọi mạng
+pytest -q                       # 264 test, không gọi mạng
 python scripts/run_eval.py      # tự tải MovieLens ở lần chạy đầu
 ```
 
@@ -41,25 +41,28 @@ python scripts/so_lieu_slide.py   # mọi số dưới đây, kèm CI 95%
 | B5-Content (TMDB) | 0.4869 | 0.2563 | 0.2067 | 0.8052 | 0.2788 |
 | B6-Rules (luật theo phiên) | 0.7213 | 0.4780 | 0.4131 | 0.8689 | 0.1069 |
 | B7-Hybrid (BPR + B5, α theo lịch sử) | **0.7656** | **0.5215** | **0.4561** | **0.9170** | 0.0983 |
+| B8-LightGCN (K=4) | 0.7574 | 0.5112 | 0.4436 | 0.8858 | 0.1055 |
 
 Số in đậm là cao nhất cột (trừ coverage). B3 và B4 hòa về recall@10 và nDCG@10 (CI ghép
 cặp chứa 0). B4 hơn B3 về AUC có ý nghĩa. B7 hơn B3 và B4 về nDCG@10 có ý nghĩa ở bảng
 này, nhưng trên toàn danh mục thì là nhiễu. Coverage của B7 chia cho 9.742 phim, vì B7
-gợi ý được cả phim chưa có trong train.
+gợi ý được cả phim chưa có trong train. B8 hơn B4 về nDCG@10 ở bảng này, sát ngưỡng, và
+hòa B3. Chưa đo ghép cặp B8 với B7.
 
-Số láng giềng k và siêu tham số của MF, BPR, B5, B6, B7 chọn trên tập validation (xem
-[Giao thức](#giao-thức-đánh-giá)). Dòng B3-B7 lấy từ `scripts/exp_mf.py`,
-`scripts/exp_bpr.py`, `scripts/exp_content.py`, `scripts/exp_rules.py` và
-`scripts/exp_hybrid.py`, xem [phần B3](#bậc-b3-phân-rã-ma-trận), [phần B4](#bậc-b4-bpr-mf),
-[phần B5](#bậc-b5-gợi-ý-theo-nội-dung), [phần B6](#bậc-b6-luật-kết-hợp-theo-phiên) và
-[phần B7](#bậc-b7-lai-ghép).
+Số láng giềng k và siêu tham số của MF, BPR, B5, B6, B7, B8 chọn trên tập validation (xem
+[Giao thức](#giao-thức-đánh-giá)). Dòng B3-B8 lấy từ `scripts/exp_mf.py`,
+`scripts/exp_bpr.py`, `scripts/exp_content.py`, `scripts/exp_rules.py`,
+`scripts/exp_hybrid.py` và `scripts/exp_lightgcn.py`, xem [phần B3](#bậc-b3-phân-rã-ma-trận),
+[phần B4](#bậc-b4-bpr-mf), [phần B5](#bậc-b5-gợi-ý-theo-nội-dung),
+[phần B6](#bậc-b6-luật-kết-hợp-theo-phiên), [phần B7](#bậc-b7-lai-ghép) và
+[phần B8](#bậc-b8-lightgcn).
 AUC tính từ điểm, cặp bằng điểm tính 0.5. Coverage là coverage@10, cùng k với
 các cột bên cạnh.
 
 **Cả bảng này đo trên 1 phim đúng + 99 phim âm lấy mẫu.** Trên toàn danh mục,
 chỉ còn ItemKNN, MF và BPR hơn Popularity có ý nghĩa, và đều sát ngưỡng. Ba mô hình
 này hòa nhau. B7 cũng hơn Popularity (+0.019 nDCG@10, CI [+0.007, +0.031]) và hòa MF,
-BPR. Xem
+BPR. B8 cũng vậy: hơn Popularity +0.019, CI [+0.008, +0.030], hòa MF, BPR, ItemKNN. Xem
 [phần đo thêm ở dưới](#đo-thêm-toàn-danh-mục-auc-cold-start).
 
 **Kiểm tra bằng Random không phát hiện lỗi khung đo.** Qua 10 seed: recall@10
@@ -371,6 +374,30 @@ theo số tương tác n. Số đầy đủ kèm CI và kết luận: [docs/so-l
 - **Câu giải thích** lấy từ nhánh đóng góp nhiều hơn vào điểm. Phim mới dùng câu của B5, kèm
   tiền tố "Phim moi, chua ai danh gia".
 
+## Bậc B8: LightGCN
+
+```bash
+python scripts/exp_lightgcn.py    # ~1,5-2 giờ, ghi reports/exp_lightgcn_*.csv
+```
+
+Cài trong [recsys/models/lightgcn.py](recsys/models/lightgcn.py) bằng numpy và scipy, không cần
+PyTorch. Cùng hàm mất mát và dạng điểm với BPR, thêm K lớp lan truyền trên đồ thị user-phim. Lan
+truyền là tuyến tính và ma trận kề chuẩn hóa đối xứng, nên gradient tính bằng chính phép lan
+truyền. Số đầy đủ kèm CI và kết luận: [docs/so-lieu-b8.md](docs/so-lieu-b8.md).
+
+- **Siêu tham số chọn trên validation:** K = 4, lr = 0.01, reg = 1e-4, 300 epoch, lô 8.192, Adam.
+  nDCG@10 validation 0.5077. K = 4 và 300 epoch nằm ở biên lưới, chưa thử lớn hơn.
+- **Khi lấy mẫu, B8 hơn BPR +0.022 nDCG@10**, CI [+0.006, +0.038], sát ngưỡng. Với K = 3 chênh
+  lệch này là nhiễu. Trên toàn danh mục, B8 hòa BPR, MF và ItemKNN.
+- **AUC bằng BPR** (0.8858), vì hai mô hình cùng tối ưu BPR-Opt. Cả hai hơn MF khoảng 0.025.
+- **So với K = 0, nDCG@10 tăng +0.081.** Phần lớn con số này là khoảng cách giữa K = 0 và B4
+  (−0.059): K = 0 không có bias và học quá lâu, đỉnh validation ở 100 epoch. So với B4 đã chỉnh
+  riêng, đồ thị chỉ thêm +0.022.
+- **Độ phủ:** top-10 có 1.023 phim khác nhau, nhiều nhất trong các mô hình lọc cộng tác.
+- **User mới:** ở 1 tương tác, B8 kém BPR −0.029, có ý nghĩa. Từ 3 tương tác trở lên hai mô hình hòa.
+- **Câu giải thích là hậu kiểm**, kế thừa từ BPR.
+- Fit mất khoảng 380 giây, gấp 12 lần BPR. `run_eval.py` chạy lâu hơn trước khoảng 6 phút.
+
 ## Metadata TMDB
 
 ```bash
@@ -419,6 +446,7 @@ recsys/
   models/content.py    B5 — nội dung, hồ sơ user TF-IDF từ metadata
   models/rules.py      B6 — luật kết hợp theo phiên, khai phá bằng mlxtend
   models/hybrid.py     B7 — lai ghép: Popularity, BPR, nội dung theo nhánh
+  models/lightgcn.py   B8 — LightGCN, lan truyền trên đồ thị user-phim, numpy thuần
 scripts/run_eval.py    CLI chạy so sánh
 scripts/fetch_tmdb.py  tải metadata TMDB về cache
 scripts/exp_knn.py     ba thí nghiệm của bậc B1/B2, chọn k trên validation
@@ -428,8 +456,9 @@ scripts/exp_bpr.py     thí nghiệm B4: như B3, thêm thiên lệch phổ bi�
 scripts/exp_content.py thí nghiệm B5: như B4, thêm phim mới, nối tên người
 scripts/exp_rules.py   thí nghiệm B6: cắt phiên, min_support, cách chấm điểm, user mới
 scripts/exp_hybrid.py  thí nghiệm B7: chọn α, phim mới, user mới kể cả 0 tương tác
+scripts/exp_lightgcn.py  thí nghiệm B8: chọn K, đóng góp của đồ thị, phổ biến, user mới
 scripts/so_lieu_slide.py  mọi số cho slide, kèm CI 95% (in Markdown)
-tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR, B5, B6, B7 (251 test)
+tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR, B5-B8 (264 test)
 docs/checklist.md      việc cần sửa, chia đợt, có người phụ trách
 docs/so-lieu-slide.md  số liệu và câu cần sửa cho từng slide
 docs/so-lieu-dot-2.md  số liệu và kết luận của 2.4, 2.5, 2.8
@@ -438,6 +467,7 @@ docs/so-lieu-b4.md     số liệu và kết luận của B4
 docs/so-lieu-b5.md     số liệu và kết luận của B5
 docs/so-lieu-b6.md     số liệu và kết luận của B6
 docs/so-lieu-b7.md     số liệu và kết luận của B7
+docs/so-lieu-b8.md     số liệu và kết luận của B8
 ```
 
 ## Mã nguồn và dữ liệu tái sử dụng
