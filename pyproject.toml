@@ -23,6 +23,7 @@ dependencies = [
     "requests",
     "tqdm",
     "python-dotenv",
+    "mlxtend",
 ]
 
 [project.optional-dependencies]

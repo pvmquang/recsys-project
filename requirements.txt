@@ -18,8 +18,8 @@ python-dotenv==1.2.3
 # scikit-surprise
 # implicit
 
-# Luat ket hop cho goi y theo phien, bac B6 (tuan 7-8)
-# mlxtend
+# Luat ket hop cho goi y theo phien, bac B6 (tuan 7-8). Keo theo matplotlib.
+mlxtend==0.25.0
 
 # Prototype web (tuan 11)
 # Flask
