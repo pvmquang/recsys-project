@@ -21,6 +21,7 @@ from recsys.models.bpr import BPR
 from recsys.models.content import ContentBased
 from recsys.models.hybrid import Hybrid
 from recsys.models.knn import K_ITEM, K_USER, ItemKNN, UserKNN
+from recsys.models.lightgcn import LightGCN
 from recsys.models.mf import MF
 from recsys.models.rules import AssociationRules
 
@@ -59,7 +60,8 @@ def main() -> None:
     # B5, B7 can metadata cua dung bo du lieu nen tao o day, khong o MODELS.
     # Sieu tham so chon tren validation, xem content.FIELDS..., hybrid.ALPHA...
     meta = tmdb.load_metadata(args.dataset)
-    models = [*MODELS, ContentBased(meta), Hybrid(meta)]
+    # B8 dat sau B7 de bang giu thu tu bac. Sieu tham so: xem lightgcn.N_LAYERS...
+    models = [*MODELS, ContentBased(meta), Hybrid(meta), LightGCN()]
 
     print("Danh gia" + (" (toan danh muc):" if args.full_catalog else ":"))
     df = compare(models, split, full_catalog=args.full_catalog)
