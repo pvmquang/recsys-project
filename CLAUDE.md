@@ -35,6 +35,7 @@ Làm trên nhánh riêng, PR vào `main`. `graphify-out/` là output của công
 .venv/Scripts/python scripts/exp_rules.py     # B6: luật kết hợp theo phiên, ~70 phút
 .venv/Scripts/python scripts/exp_hybrid.py    # B7: cần cache TMDB, ~45 phút
 .venv/Scripts/python scripts/exp_lightgcn.py  # B8: LightGCN, numpy thuần, ~1,5-2 giờ
+.venv/Scripts/python -m recsys.web            # web demo Flask, lần đầu ~16 phút, sau đó 8 giây
 ```
 
 Cài mới: `pip install -r requirements-lock.txt` rồi `pip install -e . --no-deps`.

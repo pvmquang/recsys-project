@@ -12,8 +12,9 @@ python -m venv .venv
 pip install -r requirements-lock.txt   # đúng phiên bản đã ghim, ba máy như nhau
 pip install -e . --no-deps             # cài gói recsys, script import được từ mọi nơi
 
-pytest -q                       # 264 test, không gọi mạng
+pytest -q                       # 287 test, không gọi mạng
 python scripts/run_eval.py      # tự tải MovieLens ở lần chạy đầu
+python -m recsys.web            # web demo, xem mục "Web demo"
 ```
 
 Cài bằng `requirements-lock.txt`, **không** bằng `requirements.txt`. File thứ hai
@@ -398,6 +399,31 @@ truyền. Số đầy đủ kèm CI và kết luận: [docs/so-lieu-b8.md](docs/
 - **Câu giải thích là hậu kiểm**, kế thừa từ BPR.
 - Fit mất khoảng 380 giây, gấp 12 lần BPR. `run_eval.py` chạy lâu hơn trước khoảng 6 phút.
 
+## Web demo
+
+```bash
+python -m recsys.web                       # 9 mô hình, mở http://127.0.0.1:5000
+python -m recsys.web --models b0,b1,b4,b5  # ít mô hình, lần đầu khoảng 1 phút
+python -m recsys.web --no-posters          # không tải ảnh bìa từ TMDB, dùng khi offline
+```
+
+Lần đầu, demo huấn luyện 9 mô hình trên tập train của leave-one-out seed 42 và ghi cache vào
+`data/cache/web/` (khoảng 390 MB). Lần đo ngày 25/11/2026 mất khoảng 16 phút, phần lớn cho B6 và
+B8. Từ lần thứ hai, server khởi động trong 8 giây. Sửa file trong `recsys/models/` thì cache tự
+bị bỏ và huấn luyện lại. Mã nguồn ở [recsys/web/](recsys/web/), phần xử lý không phụ thuộc Flask
+nằm ở `service.py`.
+
+- **Trang người dùng:** lịch sử trong train, phim người đó thực sự xem tiếp theo (phim test bị giấu)
+  và top-10 của từng mô hình kèm câu `explain()`. Gợi ý trúng phim test được tô màu.
+- **Hạng của phim test** tính giống `runner.evaluate`: xáo theo mã user rồi sắp xếp ổn định.
+  Trang hiện hạng theo cả hai giao thức, 100 ứng viên và toàn danh mục.
+- **Trang so sánh:** top-10 của mọi mô hình cạnh nhau cho cùng một người dùng.
+- **Người dùng mới:** tìm phim, chấm điểm, nhận gợi ý. B0, B1, B2, B5 huấn luyện lại trên train
+  cộng các phim đã chọn, tổng khoảng 6 giây. B6 giữ luật đã khai phá, chỉ nạp lịch sử mới
+  (`fold_in`). B7 huấn luyện lại khoảng 1 phút nếu người dùng chọn. B3, B4, B8 không có, vì cần
+  vector riêng cho người mới mà muốn có vector đó phải huấn luyện lại cả mô hình.
+- Câu giải thích là chuỗi do mô hình trả về, nên vẫn là tiếng Việt không dấu.
+
 ## Metadata TMDB
 
 ```bash
@@ -447,6 +473,8 @@ recsys/
   models/rules.py      B6 — luật kết hợp theo phiên, khai phá bằng mlxtend
   models/hybrid.py     B7 — lai ghép: Popularity, BPR, nội dung theo nhánh
   models/lightgcn.py   B8 — LightGCN, lan truyền trên đồ thị user-phim, numpy thuần
+  web/service.py       web demo: nạp hoặc huấn luyện mô hình có cache, gợi ý, người dùng mới
+  web/app.py           web demo: các trang Flask; chạy bằng python -m recsys.web
 scripts/run_eval.py    CLI chạy so sánh
 scripts/fetch_tmdb.py  tải metadata TMDB về cache
 scripts/exp_knn.py     ba thí nghiệm của bậc B1/B2, chọn k trên validation
@@ -458,7 +486,7 @@ scripts/exp_rules.py   thí nghiệm B6: cắt phiên, min_support, cách chấm
 scripts/exp_hybrid.py  thí nghiệm B7: chọn α, phim mới, user mới kể cả 0 tương tác
 scripts/exp_lightgcn.py  thí nghiệm B8: chọn K, đóng góp của đồ thị, phổ biến, user mới
 scripts/so_lieu_slide.py  mọi số cho slide, kèm CI 95% (in Markdown)
-tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR, B5-B8 (264 test)
+tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR, B5-B8, web (287 test)
 docs/checklist.md      việc cần sửa, chia đợt, có người phụ trách
 docs/so-lieu-slide.md  số liệu và câu cần sửa cho từng slide
 docs/so-lieu-dot-2.md  số liệu và kết luận của 2.4, 2.5, 2.8
