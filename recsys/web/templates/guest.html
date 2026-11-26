@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% from "_macros.html" import card, cover with context %}
+{% block title %}Người dùng mới{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Người dùng mới</h1>
+  <p class="muted">Chọn vài phim bạn đã xem rồi bấm Gợi ý. Những phim này là toàn bộ lịch sử của bạn.</p>
+</div>
+
+<div class="layout">
+  <aside>
+    <h2>1. Tìm phim</h2>
+    <form class="pick" action="{{ url_for('guest') }}" method="get">
+      {% for a in pick_args %}<input type="hidden" name="p" value="{{ a }}">{% endfor %}
+      {% if heavy %}<input type="hidden" name="nang" value="1">{% endif %}
+      <input type="search" name="q" value="{{ q }}" placeholder="Tên phim tiếng Anh, ví dụ: matrix" autofocus>
+      <button type="submit">Tìm</button>
+    </form>
+    {% if q and not found %}<p class="muted">Không thấy phim nào có “{{ q }}”.</p>{% endif %}
+    <ul class="found">
+      {% for m in found %}
+        <li>
+          <span class="t">{{ m.title }}{% if m.year %} <small>({{ m.year }})</small>{% endif %}
+            <span class="muted">· {{ m.views }} lượt</span></span>
+          {% if m.item_id in picks | map(attribute="item_id") | list %}
+            <span class="muted">đã chọn</span>
+          {% else %}
+            <a class="btn small" href="{{ url_for('guest', p=pick_args + [m.item_id ~ ':5'], q=q, nang=('1' if heavy else none)) }}">Thêm</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+
+    <h2>2. Phim đã chọn ({{ picks | length }})</h2>
+    {% if picks %}
+    <form action="{{ url_for('guest') }}" method="get">
+      <ul class="found">
+        {% for m in picks %}
+          <li>
+            <span class="t">{{ m.title }}{% if m.year %} <small>({{ m.year }})</small>{% endif %}</span>
+            <select name="p" aria-label="Điểm cho {{ m.title }}">
+              {% for r in [5, 4, 3, 2, 1] %}
+                <option value="{{ m.item_id }}:{{ r }}" {{ 'selected' if m.rating == r }}>{{ r }}★</option>
+              {% endfor %}
+            </select>
+            {% set others = pick_args | reject("equalto", pick_args[loop.index0]) | list %}
+            <a class="btn small ghost" href="{{ url_for('guest', p=others, q=q or none, nang=('1' if heavy else none)) }}">Bỏ</a>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if keys_nang %}
+      <label class="check">
+        <input type="checkbox" name="nang" value="1" {{ 'checked' if heavy }}>
+        Thêm {% for k in keys_nang %}{{ svc.models[k].name.split("-")[0] }} {{ svc.specs[k].label }}{{ ", " if not loop.last }}{% endfor %}
+        (huấn luyện lại, khoảng 1 phút)
+      </label>
+      {% endif %}
+      <button type="submit" name="go" value="1">Gợi ý</button>
+    </form>
+    {% else %}
+      <p class="muted">Chưa chọn phim nào. Không có lịch sử thì chỉ còn gợi ý Phổ biến.</p>
+    {% endif %}
+    <p class="muted small">
+      B3, B4, B8 không có ở đây: chúng cần một vector riêng cho bạn, mà muốn có vector đó
+      phải huấn luyện lại cả mô hình.
+    </p>
+  </aside>
+
+  <section>
+    {% if results %}
+      {% for col in results %}
+        <h2>{{ col.name }} · {{ col.spec.label }}
+          <small class="muted">{{ "%.1f" | format(col.seconds) }} giây</small></h2>
+        {% if col.recs %}
+          <div class="grid">{% for m in col.recs %}{{ card(m) }}{% endfor %}</div>
+        {% else %}
+          <p class="empty">{{ col.name }} không có bằng chứng cho phim nào từ lịch sử này.</p>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="empty big">
+        Kết quả sẽ hiện ở đây. Mỗi lần bấm Gợi ý, các mô hình
+        {% for k in keys_nhanh %}{{ svc.models[k].name.split("-")[0] }}{{ ", " if not loop.last }}{% endfor %}
+        được huấn luyện lại hoặc nạp lịch sử của bạn, mất vài giây.
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

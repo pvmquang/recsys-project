@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import card, cover, rank_text with context %}
+{% block title %}Người dùng {{ uid }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Người dùng #{{ uid }}</h1>
+  <p class="muted">{{ history | length }} phim trong train ·
+    <a href="{{ url_for('compare', uid=uid) }}">So sánh mọi mô hình</a></p>
+</div>
+
+<div class="layout">
+  <aside>
+    <h2>Phim xem tiếp theo</h2>
+    <div class="target">
+      {{ cover(target, "big") }}
+      <div>
+        <h3>{{ target.title }}{% if target.year %} <small>({{ target.year }})</small>{% endif %}</h3>
+        <p class="genres">{{ target.genres | join(" · ") }}</p>
+        <p class="muted">Bị giấu khỏi train. {{ target.views }} lượt xem trong train.</p>
+      </div>
+    </div>
+
+    <h2>Lịch sử gần nhất</h2>
+    <ol class="hist">
+      {% for h in history[:15] %}
+        <li>
+          <span class="stars">{{ "%g" | format(h.rating) }}★</span>
+          <span class="t">{{ h.title }}{% if h.year %} <small>({{ h.year }})</small>{% endif %}</span>
+          <span class="muted d">{{ h.date }}</span>
+        </li>
+      {% endfor %}
+    </ol>
+    {% if history | length > 15 %}<p class="muted">và {{ history | length - 15 }} phim cũ hơn.</p>{% endif %}
+  </aside>
+
+  <section>
+    <nav class="tabs">
+      {% for k, m in svc.models.items() %}
+        <a href="{{ url_for('user', uid=uid, model=k) }}" class="{{ 'on' if k == key }}">
+          {{ m.name.split("-")[0] }} {{ svc.specs[k].label }}</a>
+      {% endfor %}
+    </nav>
+    <p class="muted">{{ svc.specs[key].mo_ta }}</p>
+    <div class="rankbox">
+      Phim xem tiếp theo đứng hạng {{ rank_text(rank.mau) }}/{{ rank.n_mau }} trong 100 ứng viên
+      (giao thức bảng chính), hạng {{ rank_text(rank.toan) }}/{{ rank.n_toan }} trên toàn danh mục.
+    </div>
+    {% if recs %}
+      <div class="grid">
+        {% for m in recs %}{{ card(m) }}{% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">{{ model.name }} không có bằng chứng cho phim nào của người dùng này,
+        nên không gợi ý gì. Mô hình trả điểm −∞ thay vì đoán bừa.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

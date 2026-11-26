@@ -12,8 +12,9 @@ python -m venv .venv
 pip install -r requirements-lock.txt   # đúng phiên bản đã ghim, ba máy như nhau
 pip install -e . --no-deps             # cài gói recsys, script import được từ mọi nơi
 
-pytest -q                       # 208 test, không gọi mạng
+pytest -q                       # 287 test, không gọi mạng
 python scripts/run_eval.py      # tự tải MovieLens ở lần chạy đầu
+python -m recsys.web            # web demo, xem mục "Web demo"
 ```
 
 Cài bằng `requirements-lock.txt`, **không** bằng `requirements.txt`. File thứ hai
@@ -36,23 +37,33 @@ python scripts/so_lieu_slide.py   # mọi số dưới đây, kèm CI 95%
 | B0-Popularity | 0.5967 | 0.3590 | 0.3019 | 0.8315 | 0.0126 |
 | B1-ItemKNN (k=80) | 0.6803 | 0.4761 | 0.4225 | 0.8342 | 0.0749 |
 | B2-UserKNN (k=40) | 0.6443 | 0.4214 | 0.3647 | 0.8310 | 0.0288 |
-| B3-MF implicit (f=32) | 0.7279 | **0.5003** | **0.4386** | 0.8605 | 0.1006 |
-| B4-BPR (f=64) | **0.7328** | 0.4886 | 0.4239 | **0.8858** | 0.0911 |
+| B3-MF implicit (f=32) | 0.7279 | 0.5003 | 0.4386 | 0.8605 | 0.1006 |
+| B4-BPR (f=64) | 0.7328 | 0.4886 | 0.4239 | 0.8858 | 0.0911 |
 | B5-Content (TMDB) | 0.4869 | 0.2563 | 0.2067 | 0.8052 | 0.2788 |
+| B6-Rules (luật theo phiên) | 0.7213 | 0.4780 | 0.4131 | 0.8689 | 0.1069 |
+| B7-Hybrid (BPR + B5, α theo lịch sử) | **0.7656** | **0.5215** | **0.4561** | **0.9170** | 0.0983 |
+| B8-LightGCN (K=4) | 0.7574 | 0.5112 | 0.4436 | 0.8858 | 0.1055 |
 
-Số in đậm là cao nhất cột (trừ coverage), không có nghĩa là thắng: B3 và B4 hòa về
-recall@10 và nDCG@10 (CI ghép cặp chứa 0). B4 hơn B3 về AUC có ý nghĩa.
+Số in đậm là cao nhất cột (trừ coverage). B3 và B4 hòa về recall@10 và nDCG@10 (CI ghép
+cặp chứa 0). B4 hơn B3 về AUC có ý nghĩa. B7 hơn B3 và B4 về nDCG@10 có ý nghĩa ở bảng
+này, nhưng trên toàn danh mục thì là nhiễu. Coverage của B7 chia cho 9.742 phim, vì B7
+gợi ý được cả phim chưa có trong train. B8 hơn B4 về nDCG@10 ở bảng này, sát ngưỡng, và
+hòa B3. Chưa đo ghép cặp B8 với B7.
 
-Số láng giềng k và siêu tham số của MF, BPR, B5 chọn trên tập validation (xem
-[Giao thức](#giao-thức-đánh-giá)). Dòng B3, B4, B5 lấy từ `scripts/exp_mf.py`,
-`scripts/exp_bpr.py` và `scripts/exp_content.py`, xem [phần B3](#bậc-b3-phân-rã-ma-trận),
-[phần B4](#bậc-b4-bpr-mf) và [phần B5](#bậc-b5-gợi-ý-theo-nội-dung).
+Số láng giềng k và siêu tham số của MF, BPR, B5, B6, B7, B8 chọn trên tập validation (xem
+[Giao thức](#giao-thức-đánh-giá)). Dòng B3-B8 lấy từ `scripts/exp_mf.py`,
+`scripts/exp_bpr.py`, `scripts/exp_content.py`, `scripts/exp_rules.py`,
+`scripts/exp_hybrid.py` và `scripts/exp_lightgcn.py`, xem [phần B3](#bậc-b3-phân-rã-ma-trận),
+[phần B4](#bậc-b4-bpr-mf), [phần B5](#bậc-b5-gợi-ý-theo-nội-dung),
+[phần B6](#bậc-b6-luật-kết-hợp-theo-phiên), [phần B7](#bậc-b7-lai-ghép) và
+[phần B8](#bậc-b8-lightgcn).
 AUC tính từ điểm, cặp bằng điểm tính 0.5. Coverage là coverage@10, cùng k với
 các cột bên cạnh.
 
 **Cả bảng này đo trên 1 phim đúng + 99 phim âm lấy mẫu.** Trên toàn danh mục,
 chỉ còn ItemKNN, MF và BPR hơn Popularity có ý nghĩa, và đều sát ngưỡng. Ba mô hình
-này hòa nhau. Xem
+này hòa nhau. B7 cũng hơn Popularity (+0.019 nDCG@10, CI [+0.007, +0.031]) và hòa MF,
+BPR. B8 cũng vậy: hơn Popularity +0.019, CI [+0.008, +0.030], hòa MF, BPR, ItemKNN. Xem
 [phần đo thêm ở dưới](#đo-thêm-toàn-danh-mục-auc-cold-start).
 
 **Kiểm tra bằng Random không phát hiện lỗi khung đo.** Qua 10 seed: recall@10
@@ -308,10 +319,110 @@ kết luận: [docs/so-lieu-b5.md](docs/so-lieu-b5.md).
 - **User mới:** B5 thua Popularity và BPR ở mọi mức lịch sử, nên không dùng cho user mới.
 - **Câu giải thích là phân rã chính xác**, theo từng đặc trưng (`shared_features()`) và từng
   phim đã xem (`contributions()`).
-- `recommend()` chỉ duyệt phim có trong train, nên B5 chưa đưa phim mới lên giao diện. B7 phải
-  tự mở rộng danh mục ứng viên.
+- `recommend()` chỉ duyệt phim có trong train, nên B5 chưa đưa phim mới lên giao diện. B7 mở rộng
+  danh mục ứng viên, xem [phần B7](#bậc-b7-lai-ghép).
 - Chưa có cache TMDB thì B5 chỉ dùng thể loại và thập niên. nDCG@10 validation khi đó là 0.2035
   thay vì 0.2571.
+
+## Bậc B6: luật kết hợp theo phiên
+
+```bash
+python scripts/exp_rules.py       # ~70 phút, ghi reports/exp_rules_*.csv
+```
+
+Cài trong [recsys/models/rules.py](recsys/models/rules.py), khai phá bằng `mlxtend`. Phiên là
+chuỗi rating của một user, hai rating liền nhau cách không quá 1800 giây. Luật {a} → {j} khai
+phá trên các phiên. Điểm của phim j là confidence lớn nhất của các luật có a trong 10 phim gần
+nhất. Số đầy đủ kèm CI và kết luận: [docs/so-lieu-b6.md](docs/so-lieu-b6.md).
+
+- **Siêu tham số chọn trên validation:** khoảng nghỉ 1800 giây, min_support 0,0005, max_len 2,
+  ngữ cảnh 10 phim gần nhất, confidence, lấy max. nDCG@10 validation 0.4995, BPR được 0.4928.
+- **B6 hơn Popularity** +0.119 nDCG@10 khi lấy mẫu và +0.024 trên toàn danh mục, đều có ý nghĩa.
+  Với ItemKNN và BPR, chênh lệch nDCG@10 ở cả hai giao thức là nhiễu.
+- **556/610 phim test nằm cùng phiên với rating cuối trong train.** Trên MovieLens, phiên là
+  một buổi chấm điểm hàng loạt, không phải một buổi xem phim.
+- **Độ phủ:** top-10 của B6 có 1.037 phim khác nhau, BPR có 884. Phim của B6 phổ biến hơn:
+  59,9% thuộc top-100, của BPR là 48,5%.
+- **User mới:** B6 hơn Popularity từ 1 tương tác, thua BPR có ý nghĩa ở 1, 5, 10 tương tác.
+- **Câu giải thích** là luật mạnh nhất, kèm confidence và số phiên chứa cả hai phim.
+- Mỗi lần `fit()` khai phá lại, mất 218 giây ở min_support 0,0005. `run_eval.py` vì vậy chạy
+  lâu hơn trước.
+
+## Bậc B7: lai ghép
+
+```bash
+python scripts/exp_hybrid.py      # cần cache TMDB, ~45 phút, ghi reports/exp_hybrid_*.csv
+```
+
+Cài trong [recsys/models/hybrid.py](recsys/models/hybrid.py), ghép B0, B4, B5 theo ba nhánh. User
+chưa có lịch sử dùng Popularity. Phim BPR không chấm được dùng B5. Phần còn lại trộn
+`(1 − α_u) · BPR + α_u · B5` trên thang phân vị của từng user, với `α_u = α · n / (n + c)` tăng
+theo số tương tác n. Số đầy đủ kèm CI và kết luận: [docs/so-lieu-b7.md](docs/so-lieu-b7.md).
+
+- **Siêu tham số chọn trên validation, hai bước.** Bước 1 chọn chuẩn hóa theo phân vị, α = 0.1.
+  Bước 2 chọn dạng α_u trên validation có cắt lịch sử xuống 1, 3, 5, 10 tương tác: c = 30.
+- **Khi lấy mẫu, B7 hơn BPR** +0.033 nDCG@10, CI [+0.018, +0.047], và hơn MF +0.021, CI
+  [+0.001, +0.042]. Trên toàn danh mục, cả hai chênh lệch là nhiễu.
+- **Phần hơn AUC chủ yếu đến từ 23 user có phim test mới.** Trên 610 user, B7 hơn BPR +0.031 AUC.
+  Bỏ 23 user đó, chỉ còn +0.006.
+- **Phim mới lên được giao diện.** 26/41 phim chưa ai xem lọt vào top-10 của ít nhất một user.
+  Chúng chiếm 2,07% số chỗ trong top-10, gấp khoảng 5 lần tỉ lệ 0,4% trong danh mục.
+- **User mới:** ở 0 tương tác, nhánh Popularity hơn BPR +0.317 nDCG@10. So với α chung, α theo
+  lịch sử tăng +0.020 ở 1 tương tác (có ý nghĩa) và không đổi có ý nghĩa ở lịch sử đầy đủ. B7 vẫn
+  kém BPR −0.010 ở 1 tương tác. Phần này đến từ phim mới chen vào 99 phim âm, không từ α.
+- **Trên validation có cắt lịch sử, BPR một mình có trung bình nDCG@10 cao hơn mọi cấu hình B7**
+  (0.4831 so với 0.4816). Lợi thế của B7 chỉ có ở user lịch sử đầy đủ.
+- **Câu giải thích** lấy từ nhánh đóng góp nhiều hơn vào điểm. Phim mới dùng câu của B5, kèm
+  tiền tố "Phim moi, chua ai danh gia".
+
+## Bậc B8: LightGCN
+
+```bash
+python scripts/exp_lightgcn.py    # ~1,5-2 giờ, ghi reports/exp_lightgcn_*.csv
+```
+
+Cài trong [recsys/models/lightgcn.py](recsys/models/lightgcn.py) bằng numpy và scipy, không cần
+PyTorch. Cùng hàm mất mát và dạng điểm với BPR, thêm K lớp lan truyền trên đồ thị user-phim. Lan
+truyền là tuyến tính và ma trận kề chuẩn hóa đối xứng, nên gradient tính bằng chính phép lan
+truyền. Số đầy đủ kèm CI và kết luận: [docs/so-lieu-b8.md](docs/so-lieu-b8.md).
+
+- **Siêu tham số chọn trên validation:** K = 4, lr = 0.01, reg = 1e-4, 300 epoch, lô 8.192, Adam.
+  nDCG@10 validation 0.5077. K = 4 và 300 epoch nằm ở biên lưới, chưa thử lớn hơn.
+- **Khi lấy mẫu, B8 hơn BPR +0.022 nDCG@10**, CI [+0.006, +0.038], sát ngưỡng. Với K = 3 chênh
+  lệch này là nhiễu. Trên toàn danh mục, B8 hòa BPR, MF và ItemKNN.
+- **AUC bằng BPR** (0.8858), vì hai mô hình cùng tối ưu BPR-Opt. Cả hai hơn MF khoảng 0.025.
+- **So với K = 0, nDCG@10 tăng +0.081.** Phần lớn con số này là khoảng cách giữa K = 0 và B4
+  (−0.059): K = 0 không có bias và học quá lâu, đỉnh validation ở 100 epoch. So với B4 đã chỉnh
+  riêng, đồ thị chỉ thêm +0.022.
+- **Độ phủ:** top-10 có 1.023 phim khác nhau, nhiều nhất trong các mô hình lọc cộng tác.
+- **User mới:** ở 1 tương tác, B8 kém BPR −0.029, có ý nghĩa. Từ 3 tương tác trở lên hai mô hình hòa.
+- **Câu giải thích là hậu kiểm**, kế thừa từ BPR.
+- Fit mất khoảng 380 giây, gấp 12 lần BPR. `run_eval.py` chạy lâu hơn trước khoảng 6 phút.
+
+## Web demo
+
+```bash
+python -m recsys.web                       # 9 mô hình, mở http://127.0.0.1:5000
+python -m recsys.web --models b0,b1,b4,b5  # ít mô hình, lần đầu khoảng 1 phút
+python -m recsys.web --no-posters          # không tải ảnh bìa từ TMDB, dùng khi offline
+```
+
+Lần đầu, demo huấn luyện 9 mô hình trên tập train của leave-one-out seed 42 và ghi cache vào
+`data/cache/web/` (khoảng 390 MB). Lần đo ngày 25/11/2026 mất khoảng 16 phút, phần lớn cho B6 và
+B8. Từ lần thứ hai, server khởi động trong 8 giây. Sửa file trong `recsys/models/` thì cache tự
+bị bỏ và huấn luyện lại. Mã nguồn ở [recsys/web/](recsys/web/), phần xử lý không phụ thuộc Flask
+nằm ở `service.py`.
+
+- **Trang người dùng:** lịch sử trong train, phim người đó thực sự xem tiếp theo (phim test bị giấu)
+  và top-10 của từng mô hình kèm câu `explain()`. Gợi ý trúng phim test được tô màu.
+- **Hạng của phim test** tính giống `runner.evaluate`: xáo theo mã user rồi sắp xếp ổn định.
+  Trang hiện hạng theo cả hai giao thức, 100 ứng viên và toàn danh mục.
+- **Trang so sánh:** top-10 của mọi mô hình cạnh nhau cho cùng một người dùng.
+- **Người dùng mới:** tìm phim, chấm điểm, nhận gợi ý. B0, B1, B2, B5 huấn luyện lại trên train
+  cộng các phim đã chọn, tổng khoảng 6 giây. B6 giữ luật đã khai phá, chỉ nạp lịch sử mới
+  (`fold_in`). B7 huấn luyện lại khoảng 1 phút nếu người dùng chọn. B3, B4, B8 không có, vì cần
+  vector riêng cho người mới mà muốn có vector đó phải huấn luyện lại cả mô hình.
+- Câu giải thích là chuỗi do mô hình trả về, nên vẫn là tiếng Việt không dấu.
 
 ## Metadata TMDB
 
@@ -359,6 +470,11 @@ recsys/
   models/mf.py         B3 — phân rã ma trận ALS, implicit và explicit
   models/bpr.py        B4 — BPR-MF, xếp hạng theo cặp, SGD theo lô
   models/content.py    B5 — nội dung, hồ sơ user TF-IDF từ metadata
+  models/rules.py      B6 — luật kết hợp theo phiên, khai phá bằng mlxtend
+  models/hybrid.py     B7 — lai ghép: Popularity, BPR, nội dung theo nhánh
+  models/lightgcn.py   B8 — LightGCN, lan truyền trên đồ thị user-phim, numpy thuần
+  web/service.py       web demo: nạp hoặc huấn luyện mô hình có cache, gợi ý, người dùng mới
+  web/app.py           web demo: các trang Flask; chạy bằng python -m recsys.web
 scripts/run_eval.py    CLI chạy so sánh
 scripts/fetch_tmdb.py  tải metadata TMDB về cache
 scripts/exp_knn.py     ba thí nghiệm của bậc B1/B2, chọn k trên validation
@@ -366,14 +482,20 @@ scripts/exp_giao_thuc.py  toàn danh mục, tách AUC, cold-start (checklist 2.4
 scripts/exp_mf.py      thí nghiệm B3: chọn siêu tham số, bảng test, cold-start
 scripts/exp_bpr.py     thí nghiệm B4: như B3, thêm thiên lệch phổ biến
 scripts/exp_content.py thí nghiệm B5: như B4, thêm phim mới, nối tên người
+scripts/exp_rules.py   thí nghiệm B6: cắt phiên, min_support, cách chấm điểm, user mới
+scripts/exp_hybrid.py  thí nghiệm B7: chọn α, phim mới, user mới kể cả 0 tương tác
+scripts/exp_lightgcn.py  thí nghiệm B8: chọn K, đóng góp của đồ thị, phổ biến, user mới
 scripts/so_lieu_slide.py  mọi số cho slide, kèm CI 95% (in Markdown)
-tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR, B5 (208 test)
+tests/                 chốt độ đo, phép chia, runner, CI, metadata, KNN, MF, BPR, B5-B8, web (287 test)
 docs/checklist.md      việc cần sửa, chia đợt, có người phụ trách
 docs/so-lieu-slide.md  số liệu và câu cần sửa cho từng slide
 docs/so-lieu-dot-2.md  số liệu và kết luận của 2.4, 2.5, 2.8
 docs/so-lieu-b3.md     số liệu và kết luận của B3
 docs/so-lieu-b4.md     số liệu và kết luận của B4
 docs/so-lieu-b5.md     số liệu và kết luận của B5
+docs/so-lieu-b6.md     số liệu và kết luận của B6
+docs/so-lieu-b7.md     số liệu và kết luận của B7
+docs/so-lieu-b8.md     số liệu và kết luận của B8
 ```
 
 ## Mã nguồn và dữ liệu tái sử dụng

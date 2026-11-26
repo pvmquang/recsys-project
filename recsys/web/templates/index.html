@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Hệ gợi ý phim lai ghép</h1>
+  <p>
+    Chọn một người dùng MovieLens để xem lịch sử, phim họ thực sự xem tiếp theo,
+    và gợi ý của từng mô hình kèm câu giải thích.
+  </p>
+  <form class="pick" action="{{ url_for('go') }}" method="get">
+    <input type="number" name="uid" min="{{ svc.users[0] }}" max="{{ svc.users[-1] }}"
+           placeholder="Mã người dùng ({{ svc.users[0] }}–{{ svc.users[-1] }})" required>
+    <button type="submit">Xem</button>
+    <a class="btn ghost" href="{{ url_for('random_user') }}">Ngẫu nhiên</a>
+  </form>
+  {% if loi %}<p class="err">{{ loi }}</p>{% endif %}
+  <p class="chips">
+    Gợi ý thử, theo số phim trong train:
+    {% for s in samples %}
+      <a class="chip" href="{{ url_for('user', uid=s.user_id) }}">#{{ s.user_id }} · {{ s.n }} phim</a>
+    {% endfor %}
+  </p>
+</section>
+
+<section>
+  <h2>Mô hình đang nạp</h2>
+  <table class="models">
+    <thead><tr><th>Bậc</th><th>Mô hình</th><th>Cách gợi ý</th><th>Người dùng mới</th></tr></thead>
+    <tbody>
+    {% for key, model in svc.models.items() %}
+      {% set s = svc.specs[key] %}
+      <tr>
+        <td><code>{{ model.name.split("-")[0] }}</code></td>
+        <td>{{ s.label }}</td>
+        <td>{{ s.mo_ta }}</td>
+        <td>
+          {% if s.guest == "refit" %}huấn luyện lại, vài giây
+          {% elif s.guest == "fold_in" %}nạp lịch sử, giữ luật
+          {% elif s.guest == "cham" %}huấn luyện lại, khoảng 1 phút
+          {% else %}<span class="muted">không</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="note">
+  <h2>Cách đọc kết quả</h2>
+  <ul>
+    <li>Phim cuối cùng của mỗi người bị giấu khỏi dữ liệu huấn luyện. Gợi ý trúng phim đó được tô màu.</li>
+    <li>Hạng trong 100 ứng viên là giao thức của bảng chính (1 phim đúng, 99 phim âm lấy mẫu).
+        Hạng trên toàn danh mục khó hơn nhiều.</li>
+    <li>Một người dùng chỉ là một mẫu. Kết luận so sánh mô hình nằm trong README, có khoảng tin cậy.</li>
+  </ul>
+</section>
+{% endblock %}

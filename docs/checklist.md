@@ -76,23 +76,30 @@ Số liệu mới và gợi ý câu chữ cho từng slide: [so-lieu-slide.md](s
 - [ ] **S1 Điền chỗ trống** · @... · *FB#4*
   - Slide 1: tên nhóm, giảng viên hướng dẫn. Slide 2: họ tên, MSSV, email.
 
-- [ ] **S2 Slide 4 và 8: "không nhìn thấy tương lai"** · @... · *FB#3b + RV*
+- [x] **S2 Slide 4 và 8: "không nhìn thấy tương lai"** · @... · *FB#3b + RV*
   - Đổi thành "không nhìn thấy tương lai **của chính người dùng đó**".
   - Lý do: train vẫn chứa tương tác về sau của user khác (ví dụ số đếm của Popularity).
+  - Kết quả: slide 8 thêm validation, "dự đoán tương tác" (16,2% dưới 3 sao) và hạn chế rò
+    rỉ giữa các user. Bỏ câu "phim test do mã phim quyết định" vì 2.3 đã phá hòa.
 
-- [ ] **S3 Slide 7: viết lại** · @... · *FB#1*
+- [x] **S3 Slide 7: viết lại** · @... · *FB#1*
   - Bỏ kết luận về "user ít lịch sử" — nhóm đó là 19–20 tương tác, 29 user, chênh lệch là nhiễu.
   - Không dùng bảng này làm căn cứ cho B7, hay cho kịch bản "Người dùng mới" ở slide 5.
   - Dùng số mới từ 1.5, hoặc ghi "cold-start sẽ đo ở 2.8".
+  - Kết quả: số theo giao thức đợt 2 (k = 80/40), +0.057, +0.063, +0.045 nDCG@10. Cold-start
+    thật thành slide 13 mới, số từ 2.8, B3, B4, B7, B8.
 
-- [ ] **S4 Slide 10: thay [Phim A], [Phim B]** · @... · *FB#4, #9*
+- [x] **S4 Slide 10: thay [Phim A], [Phim B]** · @... · *FB#4, #9*
   - Dùng output thật của `explain()` sau 1.9.
+  - Kết quả: User 1 → Aliens, số theo giao thức đợt 2 (48 phim tương tự, 19 người).
 
-- [ ] **S5 Slide 11: bảng kết quả** · @... · *FB#2, #3a + RV*
+- [x] **S5 Slide 11: bảng kết quả** · @... · *FB#2, #3a + RV*
   - Cột coverage ghi rõ @10, dùng số từ 1.8.
   - "Khung đo tính đúng" → "kiểm tra bằng Random không phát hiện lỗi".
   - Random báo trung bình nhiều seed (sau 1.1).
   - Bỏ các câu "UserKNN thắng AUC", "Popularity AUC cao hơn ItemKNN" (xem 1.4).
+  - Kết quả: bảng B0-B8 lấy từ README, ghi giao thức lấy mẫu dưới bảng. Thêm slide 12 cho
+    toàn danh mục (2.4). File: "Hệ gợi ý phim lai ghép - cập nhật B0-B8.pptx", nằm ngoài repo.
 
 ---
 
