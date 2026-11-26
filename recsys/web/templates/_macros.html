@@ -1,0 +1,32 @@
+{% macro cover(m, size="") %}
+  {% set src = poster(m) %}
+  <div class="cover {{ size }}">
+    {% if src %}<img src="{{ src }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}
+    <span>{{ m.title[:1] }}</span>
+  </div>
+{% endmacro %}
+
+{% macro card(m) %}
+  <article class="card{% if m.hit %} hit{% endif %}">
+    {{ cover(m) }}
+    <div class="card-body">
+      <div class="card-head">
+        <span class="rank">{{ m.rank }}</span>
+        <h3>{{ m.title }}{% if m.year %} <small>({{ m.year }})</small>{% endif %}</h3>
+      </div>
+      <p class="genres">{{ m.genres | join(" · ") }}</p>
+      <p class="badges">
+        {% if m.hit %}<span class="badge b-hit">Phim xem tiếp theo</span>{% endif %}
+        {% if m.new %}<span class="badge b-new">Chưa ai xem trong train</span>{% endif %}
+        {% if m.branch %}<span class="badge">{{ m.branch }}</span>{% endif %}
+        <span class="muted">{{ m.views }} lượt xem</span>
+      </p>
+      {% if m.explain %}<p class="why">{{ m.explain }}</p>{% endif %}
+    </div>
+  </article>
+{% endmacro %}
+
+{% macro rank_text(r) -%}
+  {%- if r is none %}<span class="muted">không có điểm</span>
+  {%- else %}<b>{{ r }}</b>{% endif -%}
+{%- endmacro %}

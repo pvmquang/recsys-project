@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Hệ gợi ý phim{% endblock %} · IT4613</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="{{ url_for('index') }}">Hệ gợi ý phim lai ghép</a>
+      <nav>
+        <a href="{{ url_for('index') }}">Người dùng</a>
+        <a href="{{ url_for('random_user') }}">Ngẫu nhiên</a>
+        <a href="{{ url_for('guest') }}">Người dùng mới</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="wrap foot">
+    Đồ án IT4613. Mô hình huấn luyện trên tập train của {{ svc.dataset }}
+    (leave-one-out theo thời gian, seed {{ svc.split.seed }}).
+    Ảnh bìa và metadata: TMDB.
+  </footer>
+</body>
+</html>

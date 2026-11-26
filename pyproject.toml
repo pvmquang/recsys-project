@@ -28,9 +28,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+web = ["flask"]
 
 [tool.setuptools.packages.find]
 include = ["recsys*"]
+
+[tool.setuptools.package-data]
+"recsys.web" = ["templates/*.html", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

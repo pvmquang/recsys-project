@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import rank_text %}
+{% block title %}So sánh · người dùng {{ uid }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>So sánh mô hình · người dùng #{{ uid }}</h1>
+  <p class="muted">
+    Phim xem tiếp theo: <b>{{ target.title }}</b>{% if target.year %} ({{ target.year }}){% endif %}.
+    Ô tô màu là chỗ mô hình gợi ý trúng phim đó.
+    <a href="{{ url_for('user', uid=uid) }}">Quay lại trang người dùng</a>
+  </p>
+</div>
+<div class="scroll">
+<table class="cmp">
+  <thead>
+    <tr>
+      <th>#</th>
+      {% for c in cols %}
+        <th><a href="{{ url_for('user', uid=uid, model=c.key) }}">{{ c.name.split("-")[0] }}</a><br>
+          <small>{{ c.spec.label if c.spec else c.name }}</small></th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in range(10) %}
+      <tr>
+        <td class="muted">{{ i + 1 }}</td>
+        {% for c in cols %}
+          {% set m = c.recs[i] if i < c.recs | length else none %}
+          <td class="{{ 'hit' if m and m.hit }}" {% if m and m.explain %}title="{{ m.explain }}"{% endif %}>
+            {% if m %}{{ m.title }}{% if m.new %} <span class="badge b-new">mới</span>{% endif %}
+            {% else %}<span class="muted">·</span>{% endif %}
+          </td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th>Hạng /100</th>
+      {% for c in cols %}<td>{{ rank_text(c.rank.mau) }}</td>{% endfor %}
+    </tr>
+    <tr>
+      <th>Hạng toàn danh mục</th>
+      {% for c in cols %}<td>{{ rank_text(c.rank.toan) }}</td>{% endfor %}
+    </tr>
+  </tfoot>
+</table>
+</div>
+<p class="muted">Rê chuột lên một ô để xem câu giải thích. Hạng xếp đúng như khung đánh giá:
+  xáo theo mã người dùng rồi sắp xếp ổn định, nên các phim bằng điểm phá hòa giống nhau.</p>
+{% endblock %}

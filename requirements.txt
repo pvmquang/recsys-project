@@ -21,8 +21,8 @@ python-dotenv==1.2.3
 # Luat ket hop cho goi y theo phien, bac B6 (tuan 7-8). Keo theo matplotlib.
 mlxtend==0.25.0
 
-# Prototype web (tuan 11)
-# Flask
+# Prototype web (tuan 11): python -m recsys.web
+Flask==3.1.3
 
 # torch cho B6/B8: cai RIENG, khong ghim o day (ban CPU vs CUDA khac nhau):
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
